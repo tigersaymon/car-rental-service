@@ -7,3 +7,4 @@ PyJWT==2.10.1
 python-dotenv==1.2.1
 ruff==0.14.11
 sqlparse==0.5.5
+stripe==14.1.0
