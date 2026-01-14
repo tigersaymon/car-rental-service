@@ -3,6 +3,7 @@ from django.contrib.auth.base_user import BaseUserManager
 
 class UserManager(BaseUserManager):
     """Define a model manager for User model with no username field."""
+
     use_in_migrations = True
 
     def _create_user(self, email, password, **extra_fields):

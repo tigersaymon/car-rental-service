@@ -27,11 +27,7 @@ class Rental(models.Model):
     end_date = models.DateField()
     actual_return_date = models.DateField(null=True, blank=True)
 
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.BOOKED
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.BOOKED)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
