@@ -2,7 +2,9 @@ services:
   app:
     build: .
     container_name: car_rental_app
-    command: python manage.py runserver 0.0.0.0:8000
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
     ports:
