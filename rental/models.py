@@ -52,3 +52,8 @@ class Rental(models.Model):
 
         if self.start_date and self.start_date < timezone.now().date() and not self.pk:
             raise ValidationError(_("Start date cannot be in the past."))
+
+    @property
+    def total_cost(self):
+        days = (self.end_date - self.start_date).days + 1
+        return days * self.car.daily_rate
