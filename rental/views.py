@@ -1,9 +1,10 @@
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 
+from notifications.tasks import notify_new_rental
+
 from .models import Rental
 from .serializers import RentalCreateSerializer, RentalSerializer
-from notifications.tasks import notify_new_rental
 
 
 class RentalViewSet(
