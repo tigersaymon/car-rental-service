@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "car",
     "rental",
     "payment",
+    "notifications",
 ]
 
 MIDDLEWARE = [

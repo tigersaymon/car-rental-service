@@ -7,3 +7,6 @@ PyJWT==2.10.1
 python-dotenv==1.2.1
 ruff==0.14.11
 sqlparse==0.5.5
+celery[redis]==5.3.1
+redis==5.3.1
+requests==2.31.0
