@@ -117,3 +117,8 @@ USE_TZ = True
 STATIC_URL = "static/"
 
 AUTH_USER_MODEL = "user.User"
+
+
+# Telegram
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_ADMIN_CHAT_ID = os.getenv("TELEGRAM_ADMIN_CHAT_ID")
