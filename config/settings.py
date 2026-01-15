@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     # third party apps
     "rest_framework",
     "rest_framework_simplejwt",
+    "drf_spectacular",
     "django_filters",
     # apps
     "user",
@@ -94,6 +95,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 
@@ -118,3 +120,11 @@ USE_TZ = True
 STATIC_URL = "static/"
 
 AUTH_USER_MODEL = "user.User"
+
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Car Rental Service API",
+    "DESCRIPTION": "API documentation for the Car Rental Service project",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+}
