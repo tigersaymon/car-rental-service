@@ -12,12 +12,11 @@ class CarFilter(django_filters.FilterSet):
 
     available = django_filters.BooleanFilter(method="filter_available", label="Available for rent")
 
+    brand = django_filters.CharFilter(lookup_expr="icontains")
+
     class Meta:
         model = Car
-        fields = [
-            "brand",
-            "fuel_type",
-        ]
+        fields = ["fuel_type"]
 
     def filter_available(self, queryset, name, value):
         if value:
