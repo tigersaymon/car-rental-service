@@ -3,6 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from .models import Rental
 from .serializers import RentalCreateSerializer, RentalSerializer
+from notifications.tasks import notify_new_rental
 
 
 class RentalViewSet(
@@ -23,3 +24,7 @@ class RentalViewSet(
         if self.action == "create":
             return RentalCreateSerializer
         return RentalSerializer
+
+    def perform_create(self, serializer):
+        rental = serializer.save()
+        notify_new_rental.delay(rental.id)
