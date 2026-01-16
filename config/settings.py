@@ -137,6 +137,6 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
     "check-overdue-rentals-every-5-min": {
         "task": "notifications.tasks.overdue_rentals.notify_overdue_rentals",
-        "schedule": crontab(minute="*/5"),
+        "schedule": crontab(minute="*/1"),
     },
 }
