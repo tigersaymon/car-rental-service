@@ -5,7 +5,7 @@ from rental.views import RentalViewSet
 
 
 router = DefaultRouter()
-router.register("rentals", RentalViewSet, basename="rental")
+router.register("", RentalViewSet, basename="rental")
 
 urlpatterns = [path("", include(router.urls))]
 
