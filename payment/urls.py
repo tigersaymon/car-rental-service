@@ -1,20 +1,16 @@
 from django.urls import path
 from .views import (
-    StripeWebhookView,
-    PaymentSuccessView,
-    PaymentCancelView,
-    CreateRentalPaymentView,
+    StripeWebhookAPIView,
+    PaymentSuccessAPIView,
+    PaymentCancelAPIView,
+    CreateRentalPaymentAPIView,
 )
 
 app_name = "payment"
 
 urlpatterns = [
-    path("stripe/webhook/", StripeWebhookView.as_view(), name="stripe-webhook"),
-    path("success/", PaymentSuccessView.as_view(), name="success"),
-    path("cancel/", PaymentCancelView.as_view(), name="cancel"),
-    path(
-        "rental/<int:rental_id>/payment/",
-        CreateRentalPaymentView.as_view(),
-        name="create-rental-payment"
-    ),
+    path("stripe/webhook/", StripeWebhookAPIView.as_view(), name="stripe-webhook"),
+    path("success/", PaymentSuccessAPIView.as_view(), name="success"),
+    path("cancel/", PaymentCancelAPIView.as_view(), name="cancel"),
+    path("rental/<int:rental_id>/payment/", CreateRentalPaymentAPIView.as_view(), name="create-rental-payment"),
 ]
