@@ -80,3 +80,30 @@ class RentalViewSet(
                 rental.save()
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["POST"], url_path="cancel")
+    def cancel_rental(self, request, pk=None):
+        rental = self.get_object()
+
+        if rental.status != Rental.Status.BOOKED:
+            return Response({"error": "Cannot cancel this rental"}, status=400)
+
+        with transaction.atomic():
+            rental.status = Rental.Status.CANCELLED
+            rental.save()
+
+            rental_start_dt = timezone.datetime.combine(rental.start_date, timezone.datetime.min.time())
+            if timezone.is_aware(timezone.now()):
+                rental_start_dt = timezone.make_aware(rental_start_dt)
+
+            if rental_start_dt - timezone.now() < timezone.timedelta(hours=24):
+                payment = create_stripe_payment_for_rental(
+                    rental=rental, payment_type=Payment.Type.CANCELLATION_FEE, request=request
+                )
+
+                return Response(
+                    {"message": "Rental cancelled late. Fee charged.", "payment_url": payment.session_url},
+                    status=status.HTTP_200_OK,
+                )
+
+        return Response({"message": "Rental cancelled successfully"}, status=status.HTTP_200_OK)
