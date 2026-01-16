@@ -1,5 +1,15 @@
+import os
+import uuid
+
 from django.db import models
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
+
+
+def car_image_file_path(instance, filename):
+    _, extension = os.path.splitext(filename)
+    filename = f"{slugify(instance.brand)}-{uuid.uuid4()}{extension}"
+    return os.path.join("uploads/cars/", filename)
 
 
 class Car(models.Model):
@@ -15,6 +25,7 @@ class Car(models.Model):
     fuel_type = models.CharField(max_length=10, choices=FuelType.choices)
     daily_rate = models.DecimalField(max_digits=10, decimal_places=2)
     inventory = models.PositiveIntegerField()
+    image = models.ImageField(null=True, upload_to=car_image_file_path)
 
     class Meta:
         ordering = ["brand", "model"]
