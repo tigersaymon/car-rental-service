@@ -15,6 +15,7 @@ from .serializers import (
     RentalCreateSerializer,
     RentalDetailSerializer,
     RentalListSerializer,
+    RentalReturnSerializer,
 )
 
 
@@ -45,6 +46,10 @@ class RentalViewSet(
             return RentalDetailSerializer
         if self.action == "create":
             return RentalCreateSerializer
+
+        if self.action in ["return_car", "cancel_rental"]:
+            return RentalReturnSerializer
+
         return RentalListSerializer
 
     @action(detail=True, methods=["POST"], url_path="return")

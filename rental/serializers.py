@@ -63,3 +63,7 @@ class RentalCreateSerializer(serializers.ModelSerializer):
         rental = Rental.objects.create(user=self.context["request"].user, status=Rental.Status.BOOKED, **validated_data)
 
         return rental
+
+
+class RentalReturnSerializer(serializers.Serializer):
+    pass
