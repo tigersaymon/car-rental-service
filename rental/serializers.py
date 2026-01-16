@@ -1,13 +1,16 @@
 from django.db.models import Q
 from rest_framework import serializers
 
-from car.serializers import CarSerializer
+from car.serializers import (
+    CarDetailSerializer,
+    CarListSerializer,
+)
 
 from .models import Rental
 
 
 class RentalListSerializer(serializers.ModelSerializer):
-    car = serializers.StringRelatedField()
+    car = CarListSerializer(read_only=True)
 
     class Meta:
         model = Rental
@@ -15,7 +18,7 @@ class RentalListSerializer(serializers.ModelSerializer):
 
 
 class RentalDetailSerializer(serializers.ModelSerializer):
-    car = CarSerializer(read_only=True)
+    car = CarDetailSerializer(read_only=True)
 
     class Meta:
         model = Rental
@@ -58,8 +61,5 @@ class RentalCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         rental = Rental.objects.create(user=self.context["request"].user, status=Rental.Status.BOOKED, **validated_data)
-
-        # TODO: Asynchronous notification task
-        # send_rental_confirmation.delay(rental.id)
 
         return rental
