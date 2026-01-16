@@ -6,7 +6,6 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from notifications.tasks.new_rental import notify_new_rental
 from payment.models import Payment
 from payment.services import create_stripe_payment_for_rental
 
