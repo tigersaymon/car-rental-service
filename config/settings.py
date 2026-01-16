@@ -1,7 +1,9 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -29,11 +31,14 @@ INSTALLED_APPS = [
     # third party apps
     "rest_framework",
     "rest_framework_simplejwt",
+    "drf_spectacular",
+    "django_filters",
     # apps
     "user",
     "car",
     "rental",
     "payment",
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -65,8 +70,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
     "default": {
@@ -79,8 +82,6 @@ DATABASES = {
     }
 }
 
-# Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -105,8 +106,14 @@ STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
-# Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": False,
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZE",
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
 
 LANGUAGE_CODE = "en-us"
 
@@ -116,9 +123,15 @@ USE_I18N = True
 
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
 
 AUTH_USER_MODEL = "user.User"
+
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Car Rental Service API",
+    "DESCRIPTION": "API documentation for the Car Rental Service project",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+}
