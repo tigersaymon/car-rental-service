@@ -6,8 +6,8 @@ from django.test import TestCase
 from django.utils import timezone
 
 from car.models import Car
-from rental.models import Rental
 from notifications.tasks.overdue_rentals import notify_overdue_rentals
+from rental.models import Rental
 
 
 User = get_user_model()
@@ -17,10 +17,7 @@ class NotifyOverdueRentalsTaskTests(TestCase):
     def setUp(self):
         self.today = timezone.localdate()
 
-        self.user = User.objects.create_user(
-            email="test@example.com",
-            password="password123"
-        )
+        self.user = User.objects.create_user(email="test@example.com", password="password123")
 
         self.car = Car.objects.create(
             brand="BMW",
@@ -32,23 +29,14 @@ class NotifyOverdueRentalsTaskTests(TestCase):
 
     def _create_valid_rental(self, **kwargs):
         return Rental.objects.create(
-            user=self.user,
-            car=self.car,
-            start_date=self.today,
-            end_date=self.today + timedelta(days=1),
-            **kwargs
+            user=self.user, car=self.car, start_date=self.today, end_date=self.today + timedelta(days=1), **kwargs
         )
 
     @patch("notifications.tasks.overdue_rentals.send_telegram_message")
-    def test_overdue_rental_becomes_overdue_and_sends_notification(
-            self,
-            mock_send
-    ):
+    def test_overdue_rental_becomes_overdue_and_sends_notification(self, mock_send):
         rental = self._create_valid_rental(status=Rental.Status.BOOKED)
 
-        Rental.objects.filter(pk=rental.pk).update(
-            end_date=self.today - timedelta(days=2)
-        )
+        Rental.objects.filter(pk=rental.pk).update(end_date=self.today - timedelta(days=2))
 
         notify_overdue_rentals()
 
@@ -66,9 +54,7 @@ class NotifyOverdueRentalsTaskTests(TestCase):
     def test_completed_rental_is_ignored(self, mock_send):
         rental = self._create_valid_rental(status=Rental.Status.COMPLETED)
 
-        Rental.objects.filter(pk=rental.pk).update(
-            end_date=self.today - timedelta(days=1)
-        )
+        Rental.objects.filter(pk=rental.pk).update(end_date=self.today - timedelta(days=1))
 
         notify_overdue_rentals()
 
@@ -79,14 +65,9 @@ class NotifyOverdueRentalsTaskTests(TestCase):
 
     @patch("notifications.services.telegram.send_telegram_message")
     def test_rental_with_actual_return_date_is_ignored(self, mock_send):
-        rental = self._create_valid_rental(
-            status=Rental.Status.BOOKED,
-            actual_return_date=self.today
-        )
+        rental = self._create_valid_rental(status=Rental.Status.BOOKED, actual_return_date=self.today)
 
-        Rental.objects.filter(pk=rental.pk).update(
-            end_date=self.today - timedelta(days=3)
-        )
+        Rental.objects.filter(pk=rental.pk).update(end_date=self.today - timedelta(days=3))
 
         notify_overdue_rentals()
 

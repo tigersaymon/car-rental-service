@@ -1,0 +1,2 @@
+from .new_rental import notify_new_rental as notify_new_rental
+from .overdue_rentals import notify_overdue_rentals as notify_overdue_rentals

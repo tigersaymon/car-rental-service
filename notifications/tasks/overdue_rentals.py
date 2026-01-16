@@ -13,18 +13,14 @@ from rental.models import Rental
 def notify_overdue_rentals(self):
     today = timezone.localdate()
 
-    overdue_rentals = Rental.objects.select_related(
-        "user", "car"
-    ).filter(
+    overdue_rentals = Rental.objects.select_related("user", "car").filter(
         end_date__lt=today,
         actual_return_date__isnull=True,
         status=Rental.Status.BOOKED,
     )
 
     for rental in overdue_rentals:
-        Rental.objects.filter(pk=rental.pk).update(
-            status=Rental.Status.OVERDUE
-        )
+        Rental.objects.filter(pk=rental.pk).update(status=Rental.Status.OVERDUE)
 
         text = (
             "⏰ <b>Rental Overdue</b>\n"
