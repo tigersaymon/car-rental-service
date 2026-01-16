@@ -4,6 +4,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from .filters import CarFilter
 from .models import Car
+from .permissions import IsAdminOrIfAuthenticatedReadOnly
 from .serializers import CarSerializer
 
 
@@ -22,3 +23,5 @@ class CarViewSet(ModelViewSet):
     search_fields = ["brand", "model"]
     ordering_fields = ["daily_rate", "year"]
     ordering = ["brand"]
+
+    permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)

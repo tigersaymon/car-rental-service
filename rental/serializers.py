@@ -1,16 +1,35 @@
 from django.db.models import Q
 from rest_framework import serializers
 
+from car.serializers import CarSerializer
+
 from .models import Rental
 
 
-class RentalSerializer(serializers.ModelSerializer):
-    car_info = serializers.CharField(source="car", read_only=True)
+class RentalListSerializer(serializers.ModelSerializer):
+    car = serializers.StringRelatedField()
 
     class Meta:
         model = Rental
-        fields = ("id", "car", "car_info", "start_date", "end_date", "actual_return_date", "status")
-        read_only_fields = ("id", "actual_return_date", "status")
+        fields = ("id", "car", "start_date", "end_date", "status", "total_cost")
+
+
+class RentalDetailSerializer(serializers.ModelSerializer):
+    car = CarSerializer(read_only=True)
+
+    class Meta:
+        model = Rental
+        fields = (
+            "id",
+            "user",
+            "car",
+            "start_date",
+            "end_date",
+            "actual_return_date",
+            "status",
+            "total_cost",
+            "created_at",
+        )
 
 
 class RentalCreateSerializer(serializers.ModelSerializer):
