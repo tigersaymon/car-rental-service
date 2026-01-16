@@ -8,8 +8,7 @@ from user.serializers import UserSerializer
 
 @extend_schema_view(
     post=extend_schema(
-        description="Endpoint for registering a new user in the system.",
-        responses={201: UserSerializer}
+        description="Endpoint for registering a new user in the system.", responses={201: UserSerializer}
     )
 )
 class CreateUserView(generics.CreateAPIView):
