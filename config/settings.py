@@ -3,6 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
 
 load_dotenv()
@@ -129,3 +130,13 @@ CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0
 
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
+
+
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_BEAT_SCHEDULE = {
+    "check-overdue-rentals-every-5-min": {
+        "task": "notifications.tasks.overdue_rentals.notify_overdue_rentals",
+        "schedule": crontab(minute="*/5"),
+    },
+}
