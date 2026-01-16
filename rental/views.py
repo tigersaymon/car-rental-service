@@ -41,7 +41,3 @@ class RentalViewSet(
         if self.action == "create":
             return RentalCreateSerializer
         return RentalListSerializer
-
-    def perform_create(self, serializer):
-        rental = serializer.save()
-        notify_new_rental.delay(rental.id)
