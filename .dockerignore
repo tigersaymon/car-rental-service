@@ -19,3 +19,8 @@ ENV/
 Dockerfile
 docker-compose.yml
 .dockerignore
+
+#Celery
+celerybeat-schedule
+celerybeat-schedule-shm
+celerybeat-schedule-wal
