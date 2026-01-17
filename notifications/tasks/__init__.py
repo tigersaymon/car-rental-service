@@ -1,3 +1,6 @@
 from .new_rental import notify_new_rental as notify_new_rental
 from .overdue_rentals import notify_overdue_rentals as notify_overdue_rentals
 from .successful_payment import notify_successful_payment as notify_successful_payment
+from .rental_cancelled import notify_rental_cancelled as notify_rental_cancelled
+from .rental_returned import notify_rental_returned as notify_rental_returned
+from .expire_payments import expire_pending_payments as expire_pending_payments
