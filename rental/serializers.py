@@ -5,6 +5,7 @@ from car.serializers import (
     CarDetailSerializer,
     CarListSerializer,
 )
+from payment.models import Payment
 
 from .models import Rental
 
@@ -41,6 +42,15 @@ class RentalCreateSerializer(serializers.ModelSerializer):
         fields = ("id", "car", "start_date", "end_date")
 
     def validate(self, attrs):
+        user = self.context["request"].user
+
+        has_pending_payments = Payment.objects.filter(rental__user=user, status=Payment.Status.PENDING).exists()
+
+        if has_pending_payments:
+            raise serializers.ValidationError(
+                "You have pending payments. Please complete them before booking a new car."
+            )
+
         start_date = attrs["start_date"]
         end_date = attrs["end_date"]
         car = attrs["car"]
