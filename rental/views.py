@@ -2,6 +2,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 
+from notifications.tasks.new_rental import notify_new_rental
+
 from .filters import RentalFilter
 from .models import Rental
 from .serializers import (
@@ -39,3 +41,7 @@ class RentalViewSet(
         if self.action == "create":
             return RentalCreateSerializer
         return RentalListSerializer
+
+    def perform_create(self, serializer):
+        rental = serializer.save()
+        notify_new_rental.delay(rental.id)
