@@ -9,6 +9,7 @@ urlpatterns = [
     path("api/user/", include("user.urls", namespace="user")),
     path("api/cars/", include("car.urls", namespace="car")),
     path("api/rentals/", include("rental.urls", namespace="rental")),
+    path("api/payment/", include("payment.urls", namespace="payment")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/doc/swagger/",

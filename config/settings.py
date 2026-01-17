@@ -15,7 +15,11 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-default-key")
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "anthropogenic-empirically-zayne.ngrok-free.dev",
+    "localhost",
+    "127.0.0.1",
+]
 
 
 INSTALLED_APPS = [
@@ -110,6 +114,9 @@ REST_FRAMEWORK = {
     },
 }
 
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
