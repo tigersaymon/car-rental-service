@@ -1,22 +1,21 @@
 from django.db import transaction
 from django.utils import timezone
-
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from notifications.tasks.new_rental import notify_new_rental
-
 from payment.models import Payment
 from payment.services import create_stripe_payment_for_rental
+
 from .filters import RentalFilter
 from .models import Rental
 from .serializers import (
     RentalCreateSerializer,
     RentalDetailSerializer,
     RentalListSerializer,
+    RentalReturnSerializer,
 )
 
 
@@ -47,16 +46,17 @@ class RentalViewSet(
             return RentalDetailSerializer
         if self.action == "create":
             return RentalCreateSerializer
-        return RentalListSerializer
 
-    def perform_create(self, serializer):
-        serializer.save()
+        if self.action in ["return_car", "cancel_rental"]:
+            return RentalReturnSerializer
+
+        return RentalListSerializer
 
     @action(detail=True, methods=["POST"], url_path="return")
     def return_car(self, request, pk=None):
         rental = self.get_object()
 
-        if rental.status != Rental.Status.BOOKED:
+        if rental.status not in [Rental.Status.BOOKED, Rental.Status.OVERDUE]:
             return Response({"error": "Rental is not active"}, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
