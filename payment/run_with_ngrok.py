@@ -1,6 +1,8 @@
 import os
 import subprocess
-from pyngrok import ngrok, conf
+
+from pyngrok import conf, ngrok
+
 
 if __name__ == "__main__":
     auth_token = os.getenv("NGROK_AUTH")

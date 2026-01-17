@@ -15,8 +15,11 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-default-key")
 
 DEBUG = True
 
-ALLOWED_HOSTS = ["anthropogenic-empirically-zayne.ngrok-free.dev",
-                 "localhost", "127.0.0.1",]
+ALLOWED_HOSTS = [
+    "anthropogenic-empirically-zayne.ngrok-free.dev",
+    "localhost",
+    "127.0.0.1",
+]
 
 
 INSTALLED_APPS = [
