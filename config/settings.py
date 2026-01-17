@@ -164,6 +164,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "notifications.tasks.overdue_rentals.notify_overdue_rentals",
         "schedule": crontab(minute="*/1"),
     },
+    "expire-payments-every-minute": {
+        "task": "notifications.tasks.expire_payments.expire_pending_payments",
+        "schedule": crontab(minute="*/1"),
+    },
 }
 
 
