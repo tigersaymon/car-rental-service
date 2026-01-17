@@ -91,7 +91,13 @@ def complete_rental_if_all_payments_paid(payment: Payment) -> None:
     """
 
     rental = payment.rental
-    if rental.status == Rental.Status.COMPLETED:
+
+    if payment.type == Payment.Type.CANCELLATION_FEE:
+        rental.status = Rental.Status.CANCELLED
+        rental.save(update_fields=["status"])
+        return
+
+    if rental.status in [Rental.Status.COMPLETED, Rental.Status.CANCELLED]:
         return
 
     has_pending_payments = (
