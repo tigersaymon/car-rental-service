@@ -5,6 +5,7 @@ from car.serializers import (
     CarDetailSerializer,
     CarListSerializer,
 )
+from payment.models import Payment
 
 from .models import Rental
 
@@ -41,6 +42,18 @@ class RentalCreateSerializer(serializers.ModelSerializer):
         fields = ("id", "car", "start_date", "end_date")
 
     def validate(self, attrs):
+        user = self.context["request"].user
+
+        if Payment.objects.filter(rental__user=user, status=Payment.Status.PENDING).exists():
+            raise serializers.ValidationError("You have pending payments! Please pay them first.")
+
+        active_rentals_count = Rental.objects.filter(
+            user=user, status__in=[Rental.Status.BOOKED, Rental.Status.OVERDUE]
+        ).count()
+
+        if active_rentals_count >= 3:
+            raise serializers.ValidationError("You cannot rent more than 3 cars at the same time.")
+
         start_date = attrs["start_date"]
         end_date = attrs["end_date"]
         car = attrs["car"]
