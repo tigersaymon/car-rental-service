@@ -7,6 +7,7 @@ from django.urls import reverse
 from payment.models import Payment
 from rental.models import Rental
 
+
 FINE_MULTIPLIER = Decimal("1.5")
 
 
@@ -25,13 +26,9 @@ def create_stripe_payment_for_rental(
 
     amount = _calculate_amount(rental=rental, payment_type=payment_type)
 
-    success_url = request.build_absolute_uri(
-        reverse("payment:success")
-    ) + "?session_id={CHECKOUT_SESSION_ID}"
+    success_url = request.build_absolute_uri(reverse("payment:success")) + "?session_id={CHECKOUT_SESSION_ID}"
 
-    cancel_url = request.build_absolute_uri(
-        reverse("payment:cancel")
-    )
+    cancel_url = request.build_absolute_uri(reverse("payment:cancel"))
 
     session = stripe.checkout.Session.create(
         mode="payment",
@@ -86,3 +83,21 @@ def _calculate_amount(*, rental: Rental, payment_type: Payment.Type) -> Decimal:
         return (Decimal(overdue_days) * daily_rate * FINE_MULTIPLIER).quantize(Decimal("0.01"))
 
     raise ValueError("Unsupported payment type")
+
+
+def complete_rental_if_all_payments_paid(payment: Payment) -> None:
+    """
+    Marks rental as COMPLETED if there are no pending payments left.
+    """
+
+    rental = payment.rental
+    if rental.status == Rental.Status.COMPLETED:
+        return
+
+    has_pending_payments = (
+        Payment.objects.filter(rental=rental, status=Payment.Status.PENDING).exclude(id=payment.id).exists()
+    )
+
+    if not has_pending_payments:
+        rental.status = Rental.Status.COMPLETED
+        rental.save(update_fields=["status"])
