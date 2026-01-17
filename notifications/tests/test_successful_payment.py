@@ -13,6 +13,7 @@ from user.models import User
 class SuccessfulPaymentTaskTest(TestCase):
     def test_notify_successful_payment(self):
         user = User.objects.create_user(email="test@test.com", password="12345678")
+
         car = Car.objects.create(brand="Toyota", model="Camry", year=2020, fuel_type="GAS", daily_rate=100, inventory=3)
 
         rental = Rental.objects.create(

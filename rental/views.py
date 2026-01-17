@@ -6,6 +6,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from notifications.tasks.rental_cancelled import notify_rental_cancelled
+from notifications.tasks.rental_returned import notify_rental_returned
 from payment.models import Payment
 from payment.services import create_stripe_payment_for_rental
 
@@ -83,6 +85,8 @@ class RentalViewSet(
                 response_data["message"] = "Car returned late. Please pay rental and overdue fee."
                 response_data["overdue_payment_url"] = payment_overdue.session_url
 
+            transaction.on_commit(lambda: notify_rental_returned.delay(rental.id))
+
         return Response(response_data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["POST"], url_path="cancel")
@@ -113,5 +117,7 @@ class RentalViewSet(
 
         rental.status = Rental.Status.CANCELLED
         rental.save()
+
+        transaction.on_commit(lambda: notify_rental_cancelled.delay(rental.id))
 
         return Response({"message": "Rental cancelled successfully"}, status=status.HTTP_200_OK)
