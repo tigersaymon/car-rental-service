@@ -29,7 +29,7 @@ class CarListSerializer(CarSerializer):
     Includes cars_available field for quick overview.
     """
 
-    cars_available = serializers.IntegerField(source="inventory", read_only=True)
+    cars_available = serializers.IntegerField(read_only=True)
 
     class Meta(CarSerializer.Meta):
         fields = CarSerializer.Meta.fields + ("cars_available",)

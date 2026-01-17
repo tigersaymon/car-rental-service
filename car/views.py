@@ -1,4 +1,4 @@
-from django.db import models
+from django.db.models import Count, F, Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.decorators import action
@@ -6,6 +6,8 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+
+from rental.models import Rental
 
 from .filters import CarFilter
 from .models import Car
@@ -36,11 +38,30 @@ class CarViewSet(ModelViewSet):
     ordering = ["brand"]
 
     def get_queryset(self):
-        """
-        Annotate cars_available for list view.
-        Currently equals inventory.
-        """
-        return Car.objects.all().annotate(cars_available=models.F("inventory"))
+        queryset = self.queryset
+
+        start_date = self.request.query_params.get("start_date")
+        end_date = self.request.query_params.get("end_date")
+
+        if start_date and end_date:
+            queryset = (
+                queryset.annotate(
+                    count_booked_rentals=Count(
+                        "rentals",
+                        filter=Q(
+                            rentals__status=Rental.Status.BOOKED,
+                            rentals__start_date__lte=end_date,
+                            rentals__end_date__gte=start_date,
+                        ),
+                    )
+                )
+                .annotate(cars_available=F("inventory") - F("count_booked_rentals"))
+                .filter(cars_available__gt=0)
+            )
+        else:
+            queryset = queryset.annotate(cars_available=F("inventory"))
+
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "list":
