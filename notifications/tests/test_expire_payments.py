@@ -1,14 +1,15 @@
 from datetime import timedelta
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
-from django.contrib.auth import get_user_model
 
 from car.models import Car
-from rental.models import Rental
-from payment.models import Payment
 from notifications.tasks.expire_payments import expire_pending_payments
+from payment.models import Payment
+from rental.models import Rental
+
 
 User = get_user_model()
 
@@ -16,10 +17,7 @@ User = get_user_model()
 class ExpirePendingPaymentsTaskTests(TestCase):
     def setUp(self):
         self.now = timezone.now()
-        self.user = User.objects.create_user(
-            email="test@example.com",
-            password="password123"
-        )
+        self.user = User.objects.create_user(email="test@example.com", password="password123")
 
         self.car = Car.objects.create(
             brand="BMW",
@@ -37,17 +35,14 @@ class ExpirePendingPaymentsTaskTests(TestCase):
         )
 
     @patch("notifications.tasks.expire_payments.send_telegram_message")
-    def test_expire_pending_payment_changes_status_and_sends_notification(
-            self,
-            mock_send
-    ):
+    def test_expire_pending_payment_changes_status_and_sends_notification(self, mock_send):
         old_payment = Payment.objects.create(
             rental=self.rental,
             status=Payment.Status.PENDING,
             type=Payment.Type.RENTAL,
             session_url="http://example.com/session",
             session_id="sess_123",
-            money_to_pay=100
+            money_to_pay=100,
         )
 
         expired_date = timezone.now() - timedelta(hours=25)
@@ -66,7 +61,7 @@ class ExpirePendingPaymentsTaskTests(TestCase):
             session_url="http://example.com/session",
             session_id="sess_456",
             money_to_pay=150,
-            created_at=self.now - timedelta(hours=25)
+            created_at=self.now - timedelta(hours=25),
         )
 
         expire_pending_payments()
@@ -84,7 +79,7 @@ class ExpirePendingPaymentsTaskTests(TestCase):
             session_url="http://example.com/session",
             session_id="sess_789",
             money_to_pay=200,
-            created_at=self.now - timedelta(hours=1)
+            created_at=self.now - timedelta(hours=1),
         )
 
         expire_pending_payments()
