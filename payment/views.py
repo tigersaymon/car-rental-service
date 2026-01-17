@@ -1,17 +1,19 @@
 # payment/views.py
 import os
+
 import stripe
 from django.shortcuts import get_object_or_404
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from notifications.tasks import notify_successful_payment
-from rental.models import Rental
 from payment.models import Payment
-from payment.services import create_stripe_payment_for_rental
+from payment.services import complete_rental_if_all_payments_paid, create_stripe_payment_for_rental
+from rental.models import Rental
 
 
 WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
@@ -44,6 +46,7 @@ class StripeWebhookAPIView(APIView):
                 payment.status = Payment.Status.PAID
                 payment.save(update_fields=["status"])
                 notify_successful_payment.delay(payment.id)
+                complete_rental_if_all_payments_paid(payment)
 
         return Response(status=200)
 
@@ -67,12 +70,7 @@ class PaymentCancelAPIView(APIView):
     permission_classes = []
 
     def get(self, request):
-        return Response({
-            "detail": (
-                "Payment was cancelled. "
-                "You can complete it later — session valid for 24 hours."
-            )
-        })
+        return Response({"detail": ("Payment was cancelled. You can complete it later — session valid for 24 hours.")})
 
 
 class CreateRentalPaymentAPIView(APIView):
@@ -81,15 +79,14 @@ class CreateRentalPaymentAPIView(APIView):
     def post(self, request, rental_id):
         rental = get_object_or_404(Rental, id=rental_id)
 
-        payment = create_stripe_payment_for_rental(
-            rental=rental,
-            payment_type=Payment.Type.RENTAL,
-            request=request
-        )
+        payment = create_stripe_payment_for_rental(rental=rental, payment_type=Payment.Type.RENTAL, request=request)
 
-        return Response({
-            "payment_id": payment.id,
-            "money_to_pay": str(payment.money_to_pay),
-            "status": payment.status,
-            "session_url": payment.session_url
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "payment_id": payment.id,
+                "money_to_pay": str(payment.money_to_pay),
+                "status": payment.status,
+                "session_url": payment.session_url,
+            },
+            status=status.HTTP_200_OK,
+        )
