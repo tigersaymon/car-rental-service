@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-
+from notifications.tasks import notify_successful_payment
 from rental.models import Rental
 from payment.models import Payment
 from payment.services import create_stripe_payment_for_rental
@@ -43,6 +43,7 @@ class StripeWebhookAPIView(APIView):
             if payment:
                 payment.status = Payment.Status.PAID
                 payment.save(update_fields=["status"])
+                notify_successful_payment.delay(payment.id)
 
         return Response(status=200)
 
