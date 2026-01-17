@@ -1,3 +1,4 @@
+from django.db import models
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.decorators import action
@@ -34,14 +35,14 @@ class CarViewSet(ModelViewSet):
     ordering_fields = ["daily_rate", "year"]
     ordering = ["brand"]
 
+    def get_queryset(self):
+        """
+        Annotate cars_available for list view.
+        Currently equals inventory.
+        """
+        return Car.objects.all().annotate(cars_available=models.F("inventory"))
+
     def get_serializer_class(self):
-        """
-        Return the appropriate serializer class depending on the action.
-        - list: CarListSerializer
-        - retrieve: CarDetailSerializer
-        - upload_image: CarImageSerializer
-        - default: CarSerializer
-        """
         if self.action == "list":
             return CarListSerializer
         if self.action == "retrieve":
