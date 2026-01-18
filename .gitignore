@@ -19,3 +19,9 @@ celerybeat-schedule
 celerybeat-schedule-shm
 celerybeat-schedule-wal
 
+# Coverage files
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
