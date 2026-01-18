@@ -2,9 +2,8 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, RequestFactory
+from django.test import RequestFactory, TestCase
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError
 
 from car.models import Car
 from payment.models import Payment

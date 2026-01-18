@@ -1,6 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -9,7 +9,6 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from car.models import Car
-from payment.models import Payment
 from rental.models import Rental
 
 
