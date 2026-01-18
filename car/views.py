@@ -22,9 +22,11 @@ from .serializers import (
 
 class CarViewSet(ModelViewSet):
     """
-    ViewSet for managing Car objects.
-    Provides CRUD operations, filtering, searching, ordering,
-    and a custom action for uploading car images.
+    Manage Car objects: CRUD, filtering, search, ordering, and image upload.
+
+    Availability logic:
+    - If start_date & end_date provided: cars_available = inventory - booked_in_range
+    - Else: cars_available = inventory
     """
 
     queryset = Car.objects.all()
@@ -38,6 +40,9 @@ class CarViewSet(ModelViewSet):
     ordering = ["brand"]
 
     def get_queryset(self):
+        """
+        Annotate queryset with cars_available based on optional date range.
+        """
         queryset = self.queryset
 
         start_date = self.request.query_params.get("start_date")
@@ -64,6 +69,9 @@ class CarViewSet(ModelViewSet):
         return queryset
 
     def get_serializer_class(self):
+        """
+        Select serializer per action: list/detail/upload_image vs default.
+        """
         if self.action == "list":
             return CarListSerializer
         if self.action == "retrieve":
@@ -80,8 +88,7 @@ class CarViewSet(ModelViewSet):
     )
     def upload_image(self, request, pk=None):
         """
-        Custom action for uploading an image to a specific Car instance.
-        Only accessible by admin users.
+        Upload an image to a car instance. Admin-only.
         """
         car = self.get_object()
         serializer = self.get_serializer(car, data=request.data)
