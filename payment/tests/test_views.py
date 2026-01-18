@@ -14,10 +14,7 @@ from user.models import User
 
 class BasePaymentViewTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            email="testuser@example.com",
-            password="testpass"
-        )
+        self.user = User.objects.create_user(email="testuser@example.com", password="testpass")
 
         self.client = APIClient()
         self.client.force_authenticate(self.user)
@@ -40,7 +37,6 @@ class BasePaymentViewTest(TestCase):
 
 
 class TestCreateRentalPaymentAPIView(BasePaymentViewTest):
-
     @patch("payment.views.create_stripe_payment_for_rental")
     def test_calls_service_and_returns_payment_data(self, mock_service):
         mock_payment = MagicMock()
@@ -68,7 +64,6 @@ class TestCreateRentalPaymentAPIView(BasePaymentViewTest):
 
 
 class TestPaymentSuccessAPIView(BasePaymentViewTest):
-
     def test_missing_session_id_returns_400(self):
         url = reverse("payment:success")
         response = self.client.get(url)
@@ -98,7 +93,6 @@ class TestPaymentSuccessAPIView(BasePaymentViewTest):
 
 
 class TestPaymentCancelAPIView(BasePaymentViewTest):
-
     def test_cancel_payment_endpoint_works(self):
         url = reverse("payment:cancel")
         response = self.client.get(url)
@@ -107,15 +101,14 @@ class TestPaymentCancelAPIView(BasePaymentViewTest):
 
 
 class TestStripeWebhookAPIView(BasePaymentViewTest):
-
     @patch("payment.views.complete_rental_if_all_payments_paid")
     @patch("payment.views.notify_successful_payment.delay")
     @patch("payment.views.stripe.Webhook.construct_event")
     def test_checkout_session_completed_marks_payment_paid(
-            self,
-            mock_construct_event,
-            mock_notify,
-            mock_complete_rental,
+        self,
+        mock_construct_event,
+        mock_notify,
+        mock_complete_rental,
     ):
         payment = Payment.objects.create(
             rental=self.rental,

@@ -132,12 +132,7 @@ class PaymentCancelAPIView(APIView):
     )
     def get(self, request):
         return Response(
-            {
-                "detail": (
-                    "Payment was cancelled. "
-                    "You can complete it later — session valid for 24 hours."
-                )
-            },
+            {"detail": ("Payment was cancelled. You can complete it later — session valid for 24 hours.")},
             status=status.HTTP_200_OK,
         )
 

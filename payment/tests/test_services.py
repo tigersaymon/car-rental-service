@@ -14,23 +14,12 @@ from user.models import User
 class PaymentServicesTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(email="user@test.com", password="1234")
-        self.car = Car.objects.create(
-            brand="BMW",
-            model="X5",
-            year=2023,
-            fuel_type="GAS",
-            daily_rate=100,
-            inventory=1
-        )
+        self.car = Car.objects.create(brand="BMW", model="X5", year=2023, fuel_type="GAS", daily_rate=100, inventory=1)
         self.rental = Rental.objects.create(
-            user=self.user,
-            car=self.car,
-            start_date=date.today(),
-            end_date=date.today() + timedelta(days=2)
+            user=self.user, car=self.car, start_date=date.today(), end_date=date.today() + timedelta(days=2)
         )
 
     def test_calculate_amount_various(self):
-
         amount = services._calculate_amount(rental=self.rental, payment_type=Payment.Type.RENTAL)
         self.assertEqual(amount, Decimal("300.00"))
 
@@ -59,9 +48,7 @@ class PaymentServicesTests(TestCase):
                 return f"http://testserver{path}"
 
         payment = services.create_stripe_payment_for_rental(
-            rental=self.rental,
-            payment_type=Payment.Type.RENTAL,
-            request=DummyRequest()
+            rental=self.rental, payment_type=Payment.Type.RENTAL, request=DummyRequest()
         )
 
         self.assertEqual(payment.rental, self.rental)
@@ -91,7 +78,7 @@ class PaymentServicesTests(TestCase):
                     status=Payment.Status.PENDING,
                     session_id="sess_pending",
                     session_url="http://stripe.test",
-                    money_to_pay=Decimal("100.00")
+                    money_to_pay=Decimal("100.00"),
                 )
 
             payment = Payment.objects.create(
@@ -100,7 +87,7 @@ class PaymentServicesTests(TestCase):
                 status=Payment.Status.PAID,
                 session_id="sess_123",
                 session_url="http://stripe.test",
-                money_to_pay=Decimal("100.00")
+                money_to_pay=Decimal("100.00"),
             )
 
             services.complete_rental_if_all_payments_paid(payment)
