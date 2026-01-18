@@ -6,6 +6,7 @@ from .models import Car
 class CarSerializer(serializers.ModelSerializer):
     """
     Base serializer for Car model.
+
     Provides fundamental fields including image.
     """
 
@@ -26,6 +27,7 @@ class CarSerializer(serializers.ModelSerializer):
 class CarListSerializer(CarSerializer):
     """
     Serializer for listing cars.
+
     Includes cars_available field for quick overview.
     """
 
@@ -38,6 +40,7 @@ class CarListSerializer(CarSerializer):
 class CarDetailSerializer(CarSerializer):
     """
     Serializer for detailed car view.
+
     Includes fuel type and image.
     """
 
@@ -48,6 +51,7 @@ class CarDetailSerializer(CarSerializer):
 class CarImageSerializer(serializers.ModelSerializer):
     """
     Serializer dedicated to uploading car images.
+
     Used in custom upload_image action in CarViewSet.
     """
 
