@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -8,6 +10,10 @@ from car.models import Car
 
 
 class Rental(models.Model):
+    """
+    Represents a rental agreement between a user and a car.
+    """
+
     class Status(models.TextChoices):
         BOOKED = "BOOKED", _("Booked")
         COMPLETED = "COMPLETED", _("Completed")
@@ -39,14 +45,23 @@ class Rental(models.Model):
             models.Index(fields=["status"]),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.user}: {self.car} ({self.start_date})"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
+        """
+        Overrides the save method to perform full validation before saving.
+        """
         self.full_clean()
         super().save(*args, **kwargs)
 
-    def clean(self):
+    def clean(self) -> None:
+        """
+        Performs custom validation for the model.
+
+        Raises:
+            ValidationError: If end_date is before start_date or start_date is in the past.
+        """
         if self.start_date and self.end_date and self.start_date > self.end_date:
             raise ValidationError(_("End date cannot be before start date."))
 
@@ -54,6 +69,12 @@ class Rental(models.Model):
             raise ValidationError(_("Start date cannot be in the past."))
 
     @property
-    def total_cost(self):
+    def total_cost(self) -> Decimal:
+        """
+        Calculates the total cost of the rental based on duration and car's daily rate.
+
+        Returns:
+            Decimal: The total cost.
+        """
         days = (self.end_date - self.start_date).days + 1
         return days * self.car.daily_rate

@@ -9,6 +9,7 @@ venv/
 
 # Database
 db.sqlite3
+uploads/
 
 # DS_Store (macOS junk)
 .DS_Store
@@ -17,3 +18,10 @@ db.sqlite3
 celerybeat-schedule
 celerybeat-schedule-shm
 celerybeat-schedule-wal
+
+# Coverage files
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover

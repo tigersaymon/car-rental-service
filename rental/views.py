@@ -1,10 +1,17 @@
 from django.db import transaction
+from django.db.models import QuerySet
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.serializers import Serializer
 
 from notifications.tasks.rental_cancelled import notify_rental_cancelled
 from notifications.tasks.rental_returned import notify_rental_returned
@@ -27,13 +34,28 @@ class RentalViewSet(
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
+    """
+    ViewSet for managing Rentals.
+
+    Provides capabilities to:
+    - List and Retrieve rentals (filtered by user ownership).
+    - Create new rentals with validation.
+    - Return cars (generating payments).
+    - Cancel rentals (calculating fees based on 24h rule).
+    """
+
     queryset = Rental.objects.select_related("car", "user")
     permission_classes = (IsAuthenticated,)
 
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RentalFilter
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Rental]:
+        """
+        Returns rentals based on user role.
+        - Staff users see all rentals.
+        - Regular users see only their own rentals.
+        """
         queryset = self.queryset
         user = self.request.user
 
@@ -41,7 +63,10 @@ class RentalViewSet(
             return queryset
         return queryset.filter(user=user)
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type[Serializer]:
+        """
+        Selects the appropriate serializer based on the action.
+        """
         if self.action == "list":
             return RentalListSerializer
         if self.action == "retrieve":
@@ -54,6 +79,42 @@ class RentalViewSet(
 
         return RentalListSerializer
 
+    @extend_schema(
+        summary="Return a rented car",
+        description="""
+            Completes the rental process by fixing the return date.
+
+            Logic:
+            1. Sets `actual_return_date` to today.
+            2. Generates a Stripe Payment session for the base rental cost.
+            3. If the return is **late** (after `end_date`), creates an additional `OVERDUE_FEE` payment.
+            4. Triggers a notification task.
+
+            Note: The rental status does not change to COMPLETED immediately. It waits for the Stripe Webhook to confirm payment.
+            """,
+        request=None,
+        responses={
+            200: [
+                OpenApiExample(
+                    "Successful Return",
+                    value={
+                        "message": "Return registered. Please pay the invoice.",
+                        "rental_payment_url": "https://checkout.stripe.com/c/pay/...",
+                    },
+                ),
+                OpenApiExample(
+                    "Late Return (Overdue)",
+                    summary="Return with Overdue Fee",
+                    value={
+                        "message": "Car returned late. Please pay rental and overdue fee.",
+                        "rental_payment_url": "https://checkout.stripe.com/c/pay/...",
+                        "overdue_payment_url": "https://checkout.stripe.com/c/pay/...",
+                    },
+                ),
+            ],
+            400: OpenApiExample("Error", value={"error": "Rental is not active"}),
+        },
+    )
     @action(detail=True, methods=["POST"], url_path="return")
     def return_car(self, request, pk=None):
         rental = self.get_object()
@@ -89,6 +150,32 @@ class RentalViewSet(
 
         return Response(response_data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Cancel a rental",
+        description="""
+            Cancels an active rental booking.
+
+            Business Logic:
+            - > 24 hours before start:** Free cancellation. Status changes to `CANCELLED` immediately.
+            - < 24 hours before start:** Late cancellation fee applies.
+              Generates a Stripe Payment session. Status changes to `CANCELLED` only after payment (via Webhook).
+            """,
+        request=None,
+        responses={
+            200: [
+                OpenApiExample("Free Cancellation", value={"message": "Rental cancelled successfully"}),
+                OpenApiExample(
+                    "Late Cancellation (Fee required)",
+                    summary="Late Cancellation",
+                    value={
+                        "message": "Late cancellation. Please pay the fee to cancel the reservation.",
+                        "payment_url": "https://checkout.stripe.com/c/pay/...",
+                    },
+                ),
+            ],
+            400: OpenApiResponse(description="Cannot cancel this rental (e.g. already completed)"),
+        },
+    )
     @action(detail=True, methods=["POST"], url_path="cancel")
     def cancel_rental(self, request, pk=None):
         rental = self.get_object()

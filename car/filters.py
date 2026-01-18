@@ -14,11 +14,21 @@ class CarFilter(django_filters.FilterSet):
 
     brand = django_filters.CharFilter(lookup_expr="icontains")
 
+    start_date = django_filters.DateFilter(method="filter_do_nothing", label="Start Date")
+    end_date = django_filters.DateFilter(method="filter_do_nothing", label="End Date")
+
     class Meta:
         model = Car
         fields = ["fuel_type"]
 
+    def filter_do_nothing(self, queryset, name, value):
+        return queryset
+
     def filter_available(self, queryset, name, value):
         if value:
+            if hasattr(queryset, "query") and "cars_available" in str(queryset.query):
+                return queryset.filter(cars_available__gt=0)
+
             return queryset.filter(inventory__gt=0)
+
         return queryset.filter(inventory=0)

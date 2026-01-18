@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.db.models import Q
 from rest_framework import serializers
 
@@ -11,6 +13,11 @@ from .models import Rental
 
 
 class RentalListSerializer(serializers.ModelSerializer):
+    """
+    Serializer for listing rentals.
+    Optimized to show essential information with a nested car summary.
+    """
+
     car = CarListSerializer(read_only=True)
 
     class Meta:
@@ -19,6 +26,11 @@ class RentalListSerializer(serializers.ModelSerializer):
 
 
 class RentalDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer for retrieving detailed rental information.
+    Includes full car details and user information.
+    """
+
     car = CarDetailSerializer(read_only=True)
 
     class Meta:
@@ -37,11 +49,24 @@ class RentalDetailSerializer(serializers.ModelSerializer):
 
 
 class RentalCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating a new rental.
+
+    Includes comprehensive validation for:
+    1. Unpaid pending payments.
+    2. Active rental limits (max 3).
+    3. Date validity (start < end).
+    4. Car availability (inventory check).
+    """
+
     class Meta:
         model = Rental
         fields = ("id", "car", "start_date", "end_date")
 
-    def validate(self, attrs):
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        """
+        Validates business logic constraints before creating a rental.
+        """
         user = self.context["request"].user
 
         if Payment.objects.filter(rental__user=user, status=Payment.Status.PENDING).exists():
@@ -72,11 +97,19 @@ class RentalCreateSerializer(serializers.ModelSerializer):
 
         return attrs
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict[str, Any]) -> Rental:
+        """
+        Creates a rental instance with the current user and BOOKED status.
+        """
         rental = Rental.objects.create(user=self.context["request"].user, status=Rental.Status.BOOKED, **validated_data)
 
         return rental
 
 
 class RentalReturnSerializer(serializers.Serializer):
+    """
+    Empty serializer used for Swagger documentation for return/cancel actions
+    where no request body is required.
+    """
+
     pass
