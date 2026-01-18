@@ -19,4 +19,4 @@ if __name__ == "__main__":
     public_url = ngrok.connect(8000)
     print("Ngrok public URL:", public_url)
 
-    subprocess.call(["python", "manage.py", "runserver", "0.0.0.0:8000"])
+    subprocess.call(["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--reload"])
