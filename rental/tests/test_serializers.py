@@ -104,8 +104,7 @@ class RentalSerializerTest(TestCase):
             status=Rental.Status.COMPLETED,
         )
         Rental.objects.bulk_create([past_rental])
-        past_rental = Rental.objects.get(user=self.user,
-                                         status=Rental.Status.COMPLETED)
+        past_rental = Rental.objects.get(user=self.user, status=Rental.Status.COMPLETED)
 
         Payment.objects.create(
             rental=past_rental,
@@ -121,8 +120,7 @@ class RentalSerializerTest(TestCase):
             "start_date": self.today,
             "end_date": self.tomorrow,
         }
-        serializer = RentalCreateSerializer(data=data,
-                                            context={"request": self.request})
+        serializer = RentalCreateSerializer(data=data, context={"request": self.request})
 
         self.assertFalse(serializer.is_valid())
         self.assertIn("You have pending payments", str(serializer.errors))
