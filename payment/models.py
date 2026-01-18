@@ -5,6 +5,19 @@ from rental.models import Rental
 
 
 class Payment(models.Model):
+    """
+    Payment associated with a rental.
+
+    Fields:
+    - rental: The rental this payment belongs to.
+    - status: Current status (PENDING, PAID, EXPIRED).
+    - type: Payment type (RENTAL, CANCELLATION_FEE, OVERDUE_FEE).
+    - session_url: Stripe Checkout URL.
+    - session_id: Stripe session identifier.
+    - money_to_pay: Amount to be paid.
+    - created_at: Timestamp of creation.
+    """
+
     class Status(models.TextChoices):
         PENDING = "PENDING", _("Pending")
         PAID = "PAID", _("Paid")
@@ -38,4 +51,5 @@ class Payment(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
+        """Return a human-readable string for the payment."""
         return f"Payment {self.id} ({self.status})"

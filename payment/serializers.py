@@ -4,6 +4,16 @@ from payment.models import Payment
 
 
 class PaymentSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Payment model.
+
+    Represents a payment created for a rental, including:
+    - payment type (rental, cancellation fee, overdue fee)
+    - current payment status
+    - amount to be paid
+    - Stripe Checkout session URL
+    """
+
     class Meta:
         model = Payment
         fields = [
