@@ -25,10 +25,15 @@ class CarFilter(django_filters.FilterSet):
         return queryset
 
     def filter_available(self, queryset, name, value):
-        if value:
-            if hasattr(queryset, "query") and "cars_available" in str(queryset.query):
-                return queryset.filter(cars_available__gt=0)
+        """
+        Filter cars by availability.
 
+        - Uses 'cars_available' annotation if present.
+        - Falls back to 'inventory' otherwise.
+        """
+        if value:
+            if hasattr(queryset, "query") and "cars_available" in queryset.query.annotations:
+                return queryset.filter(cars_available__gt=0)
             return queryset.filter(inventory__gt=0)
 
         return queryset.filter(inventory=0)
