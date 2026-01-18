@@ -1,8 +1,15 @@
 from django.db.models import Count, F, Q
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
+)
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
@@ -20,18 +27,65 @@ from .serializers import (
 )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="Get list of cars",
+        description=(
+            "Retrieve a list of cars. Supports filtering by brand, price, year, and availability. "
+            "If `start_date` and `end_date` are provided, the system filters out cars "
+            "that are fully booked for that period."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="start_date",
+                description="Filter available cars starting from this date (YYYY-MM-DD)",
+                required=False,
+                type=OpenApiTypes.DATE,
+            ),
+            OpenApiParameter(
+                name="end_date",
+                description="Filter available cars until this date (YYYY-MM-DD)",
+                required=False,
+                type=OpenApiTypes.DATE,
+            ),
+        ],
+    ),
+    retrieve=extend_schema(
+        summary="Get car details",
+        description="Retrieve detailed information about a specific car, including description and full specs.",
+    ),
+    create=extend_schema(
+        summary="Create a new car",
+        description="Create a car with an optional image upload.",
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "brand": {"type": "string"},
+                    "model": {"type": "string"},
+                    "year": {"type": "integer"},
+                    "fuel_type": {"type": "string"},
+                    "daily_rate": {"type": "number"},
+                    "inventory": {"type": "integer"},
+                    "image": {"type": "string", "format": "binary"},
+                },
+                "required": ["brand", "model", "year", "daily_rate", "inventory"],
+            }
+        },
+    ),
+    update=extend_schema(summary="Update car details (Admin only)"),
+    partial_update=extend_schema(summary="Partially update car details (Admin only)"),
+    destroy=extend_schema(summary="Delete a car (Admin only)"),
+)
 class CarViewSet(ModelViewSet):
     """
     Manage Car objects: CRUD, filtering, search, ordering, and image upload.
-
-    Availability logic:
-    - If start_date & end_date provided: cars_available = inventory - booked_in_range
-    - Else: cars_available = inventory
     """
 
     queryset = Car.objects.all()
     serializer_class = CarSerializer
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = CarFilter
@@ -69,9 +123,6 @@ class CarViewSet(ModelViewSet):
         return queryset
 
     def get_serializer_class(self):
-        """
-        Select serializer per action: list/detail/upload_image vs default.
-        """
         if self.action == "list":
             return CarListSerializer
         if self.action == "retrieve":
@@ -80,6 +131,15 @@ class CarViewSet(ModelViewSet):
             return CarImageSerializer
         return CarSerializer
 
+    @extend_schema(
+        summary="Upload car image",
+        description="Upload an image file for a specific car. Only accessible by admins.",
+        request=CarImageSerializer,
+        responses={
+            200: CarImageSerializer,
+            400: "Bad Request (Invalid image or data)",
+        },
+    )
     @action(
         methods=["POST"],
         detail=True,
@@ -87,9 +147,6 @@ class CarViewSet(ModelViewSet):
         permission_classes=[IsAdminUser],
     )
     def upload_image(self, request, pk=None):
-        """
-        Upload an image to a car instance. Admin-only.
-        """
         car = self.get_object()
         serializer = self.get_serializer(car, data=request.data)
 
