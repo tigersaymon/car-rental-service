@@ -1,6 +1,3 @@
-from urllib.parse import unquote
-
-import httpx
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import generics, status
@@ -54,10 +51,13 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
     },
 )
 class GoogleAuthRedirectView(APIView):
+    """Return the Google OAuth2 authorization URL"""
+
     authentication_classes = ()
     permission_classes = (AllowAny,)
 
     def get(self, request):
+        """Handle GET request to fetch auth URL"""
         return Response({"auth_url": google_oauth.get_authorization_url()})
 
 
@@ -98,47 +98,21 @@ class GoogleAuthRedirectView(APIView):
     ],
 )
 class GoogleAuthExchangeCodeView(APIView):
+    """Exchange Google code for JWT and login/create user"""
+
     permission_classes = (AllowAny,)
     authentication_classes = ()
 
     def post(self, request):
+        """Handle POST request to exchange code and return tokens"""
         code = request.data.get("code")
-
         if not code:
             return Response({"error": "NO code provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-        code = unquote(code)
-
-        token_response = httpx.post(
-            google_oauth.token_endpoint,
-            data={
-                "client_id": google_oauth.client_id,
-                "client_secret": google_oauth.client_secret,
-                "code": code,
-                "grant_type": "authorization_code",
-                "redirect_uri": google_oauth.redirect_uri,
-            },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-        )
-
-        token_data = token_response.json()
-
-        if token_response.status_code != 200:
-            return Response(
-                {"error": "Cant receive response", "details": token_data}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        access_token = token_data.get("access_token")
-
-        user_info_response = httpx.get(
-            google_oauth.userinfo_endpoint,
-            headers={"Authorization": f"Bearer {access_token}"},
-        )
-
-        if user_info_response.status_code != 200:
-            return Response({"error": "Cant receive user data"}, status=status.HTTP_400_BAD_REQUEST)
-
-        user_info = user_info_response.json()
+        try:
+            user_info = google_oauth.exchange_code_for_user_data(code)
+        except ValueError as e:
+            return Response(e.args[0], status=status.HTTP_400_BAD_REQUEST)
 
         email = user_info.get("email")
         user, created = User.objects.get_or_create(
@@ -152,6 +126,7 @@ class GoogleAuthExchangeCodeView(APIView):
         if created:
             user.set_unusable_password()
             user.save()
+
         refresh = RefreshToken.for_user(user)
         return Response(
             {
