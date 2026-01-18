@@ -31,7 +31,10 @@ class CarFilter(django_filters.FilterSet):
 
     def filter_available(self, queryset, name, value):
         """
-        Return cars with inventory > 0 if value is True, else inventory = 0.
+        Filter cars by availability.
+
+        - Uses 'cars_available' annotation if present.
+        - Falls back to 'inventory' otherwise.
         """
         if value:
             if hasattr(queryset, "query") and "cars_available" in queryset.query.annotations:
