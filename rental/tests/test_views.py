@@ -100,8 +100,14 @@ class TestAuthenticatedRentalAccess(RentalViewSetTestCase):
         response = self.client.get(self.list_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], self.rental.id)
+
+        if "count" in response.data:
+            self.assertEqual(response.data["count"], 1)
+        else:
+            self.assertEqual(len(response.data), 1)
+
+        results = response.data["results"] if "results" in response.data else response.data
+        self.assertEqual(results[0]["id"], self.rental.id)
 
     def test_retrieve_own_rental(self):
         response = self.client.get(self.detail_url)
@@ -234,7 +240,11 @@ class TestAdminRentalAccess(RentalViewSetTestCase):
         response = self.client.get(self.list_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+
+        if "count" in response.data:
+            self.assertEqual(response.data["count"], 2)
+        else:
+            self.assertEqual(len(response.data), 2)
 
     def test_retrieve_any_rental(self):
         """Admin can retrieve other user's rental."""
