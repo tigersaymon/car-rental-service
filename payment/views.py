@@ -1,18 +1,18 @@
-# payment/views.py
 import os
 
 import stripe
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from drf_spectacular.utils import extend_schema
-from rest_framework import status
+from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from notifications.tasks import notify_successful_payment
 from payment.models import Payment
+from payment.serializers import PaymentDetailSerializer, PaymentListSerializer
 from payment.services import (
     complete_rental_if_all_payments_paid,
     create_stripe_payment_for_rental,
@@ -85,14 +85,6 @@ class PaymentSuccessAPIView(APIView):
     @extend_schema(
         summary="Payment success callback",
         description="Returns payment information for a successful Stripe Checkout session.",
-        parameters=[
-            {
-                "name": "session_id",
-                "description": "Stripe Checkout session ID",
-                "required": True,
-                "in": "query",
-            }
-        ],
         responses={200: None, 400: None, 404: None},
     )
     def get(self, request):
@@ -173,3 +165,54 @@ class CreateRentalPaymentAPIView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List all payments",
+        description=(
+            "Retrieves a list of payments.\n\n"
+            "**Permissions:**\n"
+            "- **Staff users**: Can see all payments in the system.\n"
+            "- **Regular users**: Can only see payments related to their own rentals."
+        ),
+    ),
+    retrieve=extend_schema(
+        summary="Retrieve payment details",
+        description=(
+            "Retrieves detailed information about a specific payment.\n\n"
+            "Includes nested rental information (Car details, dates, etc.)."
+        ),
+    ),
+)
+class PaymentViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    """
+    ViewSet for viewing payments.
+    Supports listing and retrieving individual payment details.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """
+        Returns the list of payments based on user role.
+        - Staff: All payments.
+        - User: Only payments linked to their rentals.
+        Uses select_related to optimize DB queries.
+        """
+        queryset = Payment.objects.select_related("rental", "rental__car")
+        user = self.request.user
+
+        if user.is_staff:
+            return queryset
+        return queryset.filter(rental__user=user)
+
+    def get_serializer_class(self):
+        """
+        Returns the appropriate serializer class.
+        - 'retrieve': PaymentDetailSerializer (includes nested rental).
+        - 'list': PaymentListSerializer (lightweight).
+        """
+        if self.action == "retrieve":
+            return PaymentDetailSerializer
+        return PaymentListSerializer
