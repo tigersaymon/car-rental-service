@@ -27,6 +27,20 @@ from .serializers import (
 )
 
 
+CAR_PROPERTIES = {
+    "brand": {"type": "string"},
+    "model": {"type": "string"},
+    "year": {"type": "integer"},
+    "fuel_type": {
+        "type": "string",
+        "enum": [choice[0] for choice in Car.FuelType.choices],
+    },
+    "daily_rate": {"type": "number"},
+    "inventory": {"type": "integer"},
+    "image": {"type": "string", "format": "binary"},
+}
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="Get list of cars",
@@ -52,38 +66,45 @@ from .serializers import (
     ),
     retrieve=extend_schema(
         summary="Get car details",
-        description="Retrieve detailed information about a specific car, including description and full specs.",
+        description="Retrieve detailed information about a specific car.",
     ),
     create=extend_schema(
-        summary="Create a new car",
+        summary="Create a new car (Admin only)",
         description="Create a car with an optional image upload.",
         request={
             "multipart/form-data": {
                 "type": "object",
-                "properties": {
-                    "brand": {"type": "string"},
-                    "model": {"type": "string"},
-                    "year": {"type": "integer"},
-                    "fuel_type": {"type": "string"},
-                    "daily_rate": {"type": "number"},
-                    "inventory": {"type": "integer"},
-                    "image": {"type": "string", "format": "binary"},
-                },
+                "properties": CAR_PROPERTIES,
                 "required": ["brand", "model", "year", "daily_rate", "inventory"],
             }
         },
     ),
-    update=extend_schema(summary="Update car details (Admin only)"),
-    partial_update=extend_schema(summary="Partially update car details (Admin only)"),
+    update=extend_schema(
+        summary="Update car details (Admin only)",
+        description="Update all details of a car (Full replacement).",
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": CAR_PROPERTIES,
+                "required": ["brand", "model", "year", "daily_rate", "inventory"],
+            }
+        },
+    ),
+    partial_update=extend_schema(
+        summary="Partially update car details (Admin only)",
+        description="Update specific details of a car (e.g., just the price or image).",
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": CAR_PROPERTIES,
+            }
+        },
+    ),
     destroy=extend_schema(summary="Delete a car (Admin only)"),
 )
 class CarViewSet(ModelViewSet):
     """
     Manage Car objects: CRUD, filtering, search, ordering, and image upload.
-
-    Availability logic:
-    - If start_date & end_date provided: cars_available = inventory - booked_in_range
-    - Else: cars_available = inventory
     """
 
     queryset = Car.objects.all()
@@ -98,11 +119,7 @@ class CarViewSet(ModelViewSet):
     ordering = ["brand"]
 
     def get_queryset(self):
-        """
-        Annotate queryset with cars_available based on optional date range.
-        """
         queryset = self.queryset
-
         start_date = self.request.query_params.get("start_date")
         end_date = self.request.query_params.get("end_date")
 
@@ -127,9 +144,6 @@ class CarViewSet(ModelViewSet):
         return queryset
 
     def get_serializer_class(self):
-        """
-        Select serializer per action: list/detail/upload_image vs default.
-        """
         if self.action == "list":
             return CarListSerializer
         if self.action == "retrieve":
@@ -139,9 +153,15 @@ class CarViewSet(ModelViewSet):
         return CarSerializer
 
     @extend_schema(
-        summary="Upload car image",
+        summary="Upload car image (Admin only)",
         description="Upload an image file for a specific car. Only accessible by admins.",
-        request=CarImageSerializer,
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {"image": {"type": "string", "format": "binary"}},
+                "required": ["image"],
+            }
+        },
         responses={
             200: CarImageSerializer,
             400: "Bad Request (Invalid image or data)",
@@ -154,9 +174,6 @@ class CarViewSet(ModelViewSet):
         permission_classes=[IsAdminUser],
     )
     def upload_image(self, request, pk=None):
-        """
-        Upload an image to a car instance. Admin-only.
-        """
         car = self.get_object()
         serializer = self.get_serializer(car, data=request.data)
 
