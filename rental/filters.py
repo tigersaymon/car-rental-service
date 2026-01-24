@@ -7,8 +7,13 @@ class RentalFilter(django_filters.FilterSet):
     """
     FilterSet for the Rental model.
 
-    Dynamically hides the 'user' filter for non-staff users to prevent
-    them from filtering rentals by other users.
+    Features:
+    - Filters by 'status' (BOOKED, OVERDUE, etc.).
+    - Filters by 'user' (ID).
+
+    Security:
+    - Automatically removes the 'user' filter for non-staff users
+      to prevent enumeration or filtering of other users' data.
     """
 
     class Meta:

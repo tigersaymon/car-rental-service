@@ -66,6 +66,9 @@ class RentalViewSet(
     def get_serializer_class(self) -> type[Serializer]:
         """
         Selects the appropriate serializer based on the action.
+        - 'create': Serializer with validation logic.
+        - 'return_car' / 'cancel_rental': Lightweight serializers.
+        - 'list' / 'retrieve': Read-only serializers.
         """
         if self.action == "list":
             return RentalListSerializer
@@ -117,6 +120,10 @@ class RentalViewSet(
     )
     @action(detail=True, methods=["POST"], url_path="return")
     def return_car(self, request, pk=None):
+        """
+        Action to return a car.
+        Calculates total cost and handles overdue logic inside an atomic transaction.
+        """
         rental = self.get_object()
 
         if rental.status not in [Rental.Status.BOOKED, Rental.Status.OVERDUE]:
@@ -178,6 +185,10 @@ class RentalViewSet(
     )
     @action(detail=True, methods=["POST"], url_path="cancel")
     def cancel_rental(self, request, pk=None):
+        """
+        Action to cancel a rental.
+        Applies a fee if cancellation is within 24 hours of the start date.
+        """
         rental = self.get_object()
 
         if rental.status != Rental.Status.BOOKED:
