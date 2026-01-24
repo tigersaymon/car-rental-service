@@ -6,6 +6,11 @@ from user.managers import UserManager
 
 
 class User(AbstractUser):
+    """
+    Custom User model that uses email as the unique identifier
+    instead of a username.
+    """
+
     username = None
     email = models.EmailField(_("email address"), unique=True)
 

@@ -46,6 +46,10 @@ class StripeWebhookAPIView(APIView):
         responses={200: None, 400: None},
     )
     def post(self, request, *args, **kwargs):
+        """
+        Validates the webhook signature and processes the event.
+        Returns 200 OK on success or 400 Bad Request if validation fails.
+        """
         payload = request.body
         sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
 
@@ -88,6 +92,9 @@ class PaymentSuccessAPIView(APIView):
         responses={200: None, 400: None, 404: None},
     )
     def get(self, request):
+        """
+        Retrieves payment details using the session_id passed by Stripe.
+        """
         session_id = request.GET.get("session_id")
         if not session_id:
             return Response(
@@ -123,6 +130,7 @@ class PaymentCancelAPIView(APIView):
         responses={200: None},
     )
     def get(self, request):
+        """Returns a generic cancellation message."""
         return Response(
             {"detail": ("Payment was cancelled. You can complete it later — session valid for 24 hours.")},
             status=status.HTTP_200_OK,
@@ -148,6 +156,9 @@ class CreateRentalPaymentAPIView(APIView):
         responses={200: None, 401: None, 404: None},
     )
     def post(self, request, rental_id):
+        """
+        Generates a new payment session for the specified rental ID.
+        """
         rental = get_object_or_404(Rental, id=rental_id)
 
         payment = create_stripe_payment_for_rental(

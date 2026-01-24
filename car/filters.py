@@ -5,14 +5,14 @@ from .models import Car
 
 class CarFilter(django_filters.FilterSet):
     """
-    Filters for Car queryset.
+    FilterSet for the Car model.
 
-    Available filters:
-    - price_min / price_max: filter by daily_rate range
-    - min_year / max_year: filter by year range
-    - available: True → inventory > 0, False → inventory = 0
-    - brand: case-insensitive substring match
-    - fuel_type: exact match
+    Allows filtering by:
+    - Price range (price_min, price_max)
+    - Year range (min_year, max_year)
+    - Availability status (available=True/False)
+    - Brand name (case-insensitive partial match)
+    - Fuel type (exact match)
     """
 
     price_min = django_filters.NumberFilter(field_name="daily_rate", lookup_expr="gte")
@@ -33,14 +33,15 @@ class CarFilter(django_filters.FilterSet):
         fields = ["fuel_type"]
 
     def filter_do_nothing(self, queryset, name, value):
+        """Placeholder method to allow start/end_date in query params."""
         return queryset
 
     def filter_available(self, queryset, name, value):
         """
-        Filter cars by availability.
+        Filters cars based on their availability.
 
-        - Uses 'cars_available' annotation if present.
-        - Falls back to 'inventory' otherwise.
+        If 'cars_available' annotation exists (from date filtering logic), uses it.
+        Otherwise, falls back to the static 'inventory' field.
         """
         if value:
             if hasattr(queryset, "query") and "cars_available" in queryset.query.annotations:

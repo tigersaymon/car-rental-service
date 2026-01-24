@@ -12,6 +12,8 @@ from user.models import User
 
 
 class PaymentServicesTests(TestCase):
+    """Tests for business logic in payment.services module."""
+
     def setUp(self):
         self.user = User.objects.create_user(email="user@test.com", password="1234")
         self.car = Car.objects.create(brand="BMW", model="X5", year=2023, fuel_type="GAS", daily_rate=100, inventory=1)
@@ -20,6 +22,7 @@ class PaymentServicesTests(TestCase):
         )
 
     def test_calculate_amount_various(self):
+        """Tests amount calculation for different payment types (Standard, Cancel, Overdue)."""
         amount = services._calculate_amount(rental=self.rental, payment_type=Payment.Type.RENTAL)
         self.assertEqual(amount, Decimal("300.00"))
 
@@ -31,15 +34,18 @@ class PaymentServicesTests(TestCase):
         self.assertEqual(amount, Decimal("150.00"))  # 1 day overdue * 100 * 1.5
 
     def test_calculate_amount_overdue_without_actual_return_raises(self):
+        """Tests that calculating overdue fee without return date raises ValueError."""
         with self.assertRaises(ValueError):
             services._calculate_amount(rental=self.rental, payment_type=Payment.Type.OVERDUE_FEE)
 
     def test_calculate_amount_invalid_payment_type_raises(self):
+        """Tests that invalid payment type raises ValueError."""
         with self.assertRaises(ValueError):
             services._calculate_amount(rental=self.rental, payment_type="INVALID")
 
     @patch("payment.services.stripe.checkout.Session.create")
     def test_create_stripe_payment_for_rental(self, mock_session):
+        """Tests creation of Stripe session and Payment record."""
         mock_session.return_value.id = "sess_123"
         mock_session.return_value.url = "http://stripe.test"
 
@@ -59,6 +65,10 @@ class PaymentServicesTests(TestCase):
         mock_session.assert_called_once()
 
     def test_complete_rental_status_various(self):
+        """
+        Tests rental status updates based on payment completion.
+        Ensures rentals are only marked COMPLETED when all pending payments are resolved.
+        """
         scenarios = [
             ("BOOKED", Payment.Type.RENTAL, False, "COMPLETED"),
             ("BOOKED", Payment.Type.CANCELLATION_FEE, False, "CANCELLED"),

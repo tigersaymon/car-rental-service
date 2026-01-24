@@ -63,19 +63,23 @@ class TestUnauthenticatedRentalAccess(RentalViewSetTestCase):
     """
 
     def test_list_unauthorized(self):
+        """Tests that guests cannot view the rental list."""
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_create_unauthorized(self):
+        """Tests that guests cannot create a rental."""
         data = {"car": self.car.id, "start_date": self.today, "end_date": self.tomorrow}
         response = self.client.post(self.list_url, data)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_retrieve_unauthorized(self):
+        """Tests that guests cannot view rental details."""
         response = self.client.get(self.detail_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_return_unauthorized(self):
+        """Tests that guests cannot return a car."""
         response = self.client.post(self.return_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -91,6 +95,7 @@ class TestAuthenticatedRentalAccess(RentalViewSetTestCase):
         self.client.force_authenticate(user=self.user)
 
     def test_list_rentals_shows_only_own(self):
+        """Tests that the list endpoint filters out rentals belonging to other users."""
         Rental.objects.create(
             user=self.other_user,
             car=self.car,
@@ -110,6 +115,7 @@ class TestAuthenticatedRentalAccess(RentalViewSetTestCase):
         self.assertEqual(results[0]["id"], self.rental.id)
 
     def test_retrieve_own_rental(self):
+        """Tests successful retrieval of the user's own rental."""
         response = self.client.get(self.detail_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], self.rental.id)
@@ -128,6 +134,7 @@ class TestAuthenticatedRentalAccess(RentalViewSetTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_create_rental_success(self):
+        """Tests creating a valid rental."""
         data = {
             "car": self.car.id,
             "start_date": self.next_week,
@@ -143,7 +150,8 @@ class TestAuthenticatedRentalAccess(RentalViewSetTestCase):
     @patch("rental.views.notify_rental_returned.delay")
     def test_return_car_success(self, mock_notify, mock_create_payment):
         """
-        Test standard return flow.
+        Tests the standard return flow (on time).
+        Expects a payment link for the rental cost to be generated.
         """
         mock_payment = MagicMock()
         mock_payment.session_url = "http://stripe.com/test_session"
@@ -163,7 +171,8 @@ class TestAuthenticatedRentalAccess(RentalViewSetTestCase):
     @patch("rental.views.create_stripe_payment_for_rental")
     def test_return_car_overdue(self, mock_create_payment):
         """
-        Test returning a car late triggers overdue logic.
+        Tests returning a car late.
+        Expects two payment links: one for rental, one for overdue fee.
         """
         self.rental.start_date = self.today - timedelta(days=5)
         self.rental.end_date = self.today - timedelta(days=1)
@@ -186,7 +195,8 @@ class TestAuthenticatedRentalAccess(RentalViewSetTestCase):
     @patch("rental.views.notify_rental_cancelled.delay")
     def test_cancel_rental_free(self, mock_notify):
         """
-        Test cancelling > 24 hours before start.
+        Tests cancelling a rental > 24 hours before start.
+        Expects immediate cancellation without fees.
         """
         future_start = timezone.now().date() + timedelta(days=5)
         self.rental.start_date = future_start
@@ -202,7 +212,8 @@ class TestAuthenticatedRentalAccess(RentalViewSetTestCase):
     @patch("rental.views.create_stripe_payment_for_rental")
     def test_cancel_rental_late_fee(self, mock_create_payment):
         """
-        Test cancelling < 24 hours before start (today).
+        Tests cancelling a rental < 24 hours before start.
+        Expects a fee payment link; status should remain BOOKED until paid.
         """
         self.rental.start_date = timezone.now().date()
         self.rental.save()
@@ -223,6 +234,7 @@ class TestAuthenticatedRentalAccess(RentalViewSetTestCase):
 class TestAdminRentalAccess(RentalViewSetTestCase):
     """
     Tests for admin users.
+    Verifies that admins have global access to all rentals.
     """
 
     def setUp(self):
@@ -230,6 +242,7 @@ class TestAdminRentalAccess(RentalViewSetTestCase):
         self.client.force_authenticate(user=self.admin)
 
     def test_list_all_rentals(self):
+        """Tests that admin sees rentals from all users."""
         Rental.objects.create(
             user=self.other_user,
             car=self.car,
@@ -247,7 +260,7 @@ class TestAdminRentalAccess(RentalViewSetTestCase):
             self.assertEqual(len(response.data), 2)
 
     def test_retrieve_any_rental(self):
-        """Admin can retrieve other user's rental."""
+        """Tests that admin can retrieve details of any user's rental."""
         other_rental = Rental.objects.create(
             user=self.other_user,
             car=self.car,

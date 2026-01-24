@@ -5,6 +5,10 @@ from django.conf import settings
 
 
 class GoogleOAuth:
+    """
+    Service class for handling Google OAuth2 flow.
+    """
+
     def __init__(self):
         """
         Initializes the GoogleOAuth instance with client credentials
@@ -20,8 +24,10 @@ class GoogleOAuth:
 
     def get_authorization_url(self) -> str:
         """
-        Returns the Google OAuth2 authorization URL.
-        This URL should be used to redirect the user to Google's login page.
+        Generates the Google OAuth2 authorization URL.
+
+        Returns:
+            str: The URL to redirect the user to for Google login consent.
         """
         params = {
             "client_id": self.client_id,
@@ -37,6 +43,15 @@ class GoogleOAuth:
         """
         Exchanges an authorization code for an access token and retrieves
         the user's profile data from Google.
+
+        Args:
+            code (str): The authorization code received from the Google callback.
+
+        Returns:
+            dict: A dictionary containing user info (email, name, picture, etc.).
+
+        Raises:
+            ValueError: If the token exchange fails or user data cannot be retrieved.
         """
         code = unquote(code)
 
