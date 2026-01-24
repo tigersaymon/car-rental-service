@@ -3,15 +3,17 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 class IsAdminOrIfAuthenticatedReadOnly(BasePermission):
     """
-    Custom permission for Car API.
+    Custom permission to allow read-only access for authenticated users,
+    while restricting write access (create/update/delete) to admins only.
 
-    - Authenticated users: allowed to perform safe (read-only) methods.
-    - Staff users: allowed full access, including write operations.
+    - Authenticated users: GET, HEAD, OPTIONS (Safe methods)
+    - Admins: All methods (GET, POST, PUT, PATCH, DELETE)
+    - Unauthenticated: No access
     """
 
     def has_permission(self, request, view):
         """
-        Grant permission based on request method and user role.
+        Check global permissions for the request.
         """
         return bool(
             (request.method in SAFE_METHODS and request.user and request.user.is_authenticated)
