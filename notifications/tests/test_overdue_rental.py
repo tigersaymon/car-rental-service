@@ -14,6 +14,11 @@ User = get_user_model()
 
 
 class NotifyOverdueRentalsTaskTests(TestCase):
+    """
+    Tests the notify_overdue_rentals Celery task.
+    Ensures overdue rentals are marked and notifications are sent correctly.
+    """
+
     def setUp(self):
         self.today = timezone.localdate()
 
@@ -28,18 +33,18 @@ class NotifyOverdueRentalsTaskTests(TestCase):
         )
 
     def _create_valid_rental(self, **kwargs):
+        """Helper to create a rental with default dates and given kwargs."""
         return Rental.objects.create(
             user=self.user, car=self.car, start_date=self.today, end_date=self.today + timedelta(days=1), **kwargs
         )
 
     @patch("notifications.tasks.overdue_rentals.send_telegram_message")
     def test_overdue_rental_becomes_overdue_and_sends_notification(self, mock_send):
+        """Rental past end_date without return is marked OVERDUE and sends Telegram notification."""
         rental = self._create_valid_rental(status=Rental.Status.BOOKED)
 
         Rental.objects.filter(pk=rental.pk).update(end_date=self.today - timedelta(days=2))
-
         notify_overdue_rentals()
-
         rental.refresh_from_db()
 
         self.assertEqual(rental.status, Rental.Status.OVERDUE)
@@ -52,12 +57,11 @@ class NotifyOverdueRentalsTaskTests(TestCase):
 
     @patch("notifications.services.telegram.send_telegram_message")
     def test_completed_rental_is_ignored(self, mock_send):
+        """Rental with COMPLETED status is not marked overdue and no notification is sent."""
         rental = self._create_valid_rental(status=Rental.Status.COMPLETED)
 
         Rental.objects.filter(pk=rental.pk).update(end_date=self.today - timedelta(days=1))
-
         notify_overdue_rentals()
-
         rental.refresh_from_db()
 
         self.assertEqual(rental.status, Rental.Status.COMPLETED)
@@ -65,12 +69,11 @@ class NotifyOverdueRentalsTaskTests(TestCase):
 
     @patch("notifications.services.telegram.send_telegram_message")
     def test_rental_with_actual_return_date_is_ignored(self, mock_send):
+        """Rental with actual_return_date set is ignored and does not trigger notification."""
         rental = self._create_valid_rental(status=Rental.Status.BOOKED, actual_return_date=self.today)
 
         Rental.objects.filter(pk=rental.pk).update(end_date=self.today - timedelta(days=3))
-
         notify_overdue_rentals()
-
         rental.refresh_from_db()
 
         self.assertEqual(rental.status, Rental.Status.BOOKED)
@@ -78,10 +81,9 @@ class NotifyOverdueRentalsTaskTests(TestCase):
 
     @patch("notifications.services.telegram.send_telegram_message")
     def test_future_rental_is_ignored(self, mock_send):
+        """Rental ending in the future is not marked overdue and no notification is sent."""
         rental = self._create_valid_rental(status=Rental.Status.BOOKED)
-
         notify_overdue_rentals()
-
         rental.refresh_from_db()
 
         self.assertEqual(rental.status, Rental.Status.BOOKED)

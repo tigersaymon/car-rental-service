@@ -13,7 +13,13 @@ User = get_user_model()
 
 
 class RentalReturnNotificationTests(TestCase):
+    """
+    Tests the notify_rental_returned Celery task.
+    Ensures Telegram notifications are sent correctly when rentals are returned.
+    """
+
     def setUp(self):
+        """Set up user, car, and rental for testing return notifications."""
         self.user = User.objects.create_user(email="return_test@example.com", password="password123")
         self.car = Car.objects.create(brand="Tesla", model="Model 3", year=2023, daily_rate=150, inventory=5)
 
@@ -27,6 +33,7 @@ class RentalReturnNotificationTests(TestCase):
 
     @patch("notifications.tasks.rental_returned.send_telegram_message")
     def test_notify_rental_returned_success(self, mock_send):
+        """Returned rental triggers a Telegram notification with correct details."""
         self.rental.actual_return_date = timezone.now().date()
         self.rental.save()
 
@@ -45,6 +52,7 @@ class RentalReturnNotificationTests(TestCase):
 
     @patch("notifications.tasks.rental_returned.send_telegram_message")
     def test_notify_rental_returned_not_found(self, mock_send):
+        """Nonexistent rental ID does not trigger any Telegram notification."""
         notify_rental_returned(999)
 
         mock_send.assert_not_called()

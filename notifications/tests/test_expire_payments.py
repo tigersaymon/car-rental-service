@@ -15,6 +15,11 @@ User = get_user_model()
 
 
 class ExpirePendingPaymentsTaskTests(TestCase):
+    """
+    Tests the expire_pending_payments Celery task.
+    Ensures pending payments expire correctly and notifications are sent.
+    """
+
     def setUp(self):
         self.now = timezone.now()
         self.user = User.objects.create_user(email="test@example.com", password="password123")
@@ -36,6 +41,7 @@ class ExpirePendingPaymentsTaskTests(TestCase):
 
     @patch("notifications.tasks.expire_payments.send_telegram_message")
     def test_expire_pending_payment_changes_status_and_sends_notification(self, mock_send):
+        """Pending payments older than 24h are marked as expired and notify via Telegram."""
         old_payment = Payment.objects.create(
             rental=self.rental,
             status=Payment.Status.PENDING,
@@ -54,6 +60,7 @@ class ExpirePendingPaymentsTaskTests(TestCase):
 
     @patch("notifications.tasks.expire_payments.send_telegram_message")
     def test_paid_payment_is_not_expired(self, mock_send):
+        """Payments already marked as PAID remain unchanged and do not send notifications."""
         paid_payment = Payment.objects.create(
             rental=self.rental,
             status=Payment.Status.PAID,
@@ -72,6 +79,7 @@ class ExpirePendingPaymentsTaskTests(TestCase):
 
     @patch("notifications.tasks.expire_payments.send_telegram_message")
     def test_recent_pending_payment_is_not_expired(self, mock_send):
+        """Pending payments created within 24h are not expired and no notification is sent."""
         recent_payment = Payment.objects.create(
             rental=self.rental,
             status=Payment.Status.PENDING,
