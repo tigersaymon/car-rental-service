@@ -104,7 +104,7 @@ CAR_PROPERTIES = {
 )
 class CarViewSet(ModelViewSet):
     """
-    Manage Car objects: CRUD, filtering, search, ordering, and image upload.
+    ViewSet for managing cars: CRUD, filtering, search, ordering, and image upload.
     """
 
     queryset = Car.objects.all()
@@ -119,6 +119,7 @@ class CarViewSet(ModelViewSet):
     ordering = ["brand"]
 
     def get_queryset(self):
+        """Return cars with availability annotation and optional date filtering."""
         queryset = self.queryset
         start_date = self.request.query_params.get("start_date")
         end_date = self.request.query_params.get("end_date")
@@ -144,6 +145,7 @@ class CarViewSet(ModelViewSet):
         return queryset
 
     def get_serializer_class(self):
+        """Return serializer based on current action."""
         if self.action == "list":
             return CarListSerializer
         if self.action == "retrieve":
@@ -174,6 +176,7 @@ class CarViewSet(ModelViewSet):
         permission_classes=[IsAdminUser],
     )
     def upload_image(self, request, pk=None):
+        """Upload an image for a specific car."""
         car = self.get_object()
         serializer = self.get_serializer(car, data=request.data)
 
