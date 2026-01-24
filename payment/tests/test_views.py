@@ -39,6 +39,7 @@ class BasePaymentViewTest(TestCase):
 class TestCreateRentalPaymentAPIView(BasePaymentViewTest):
     @patch("payment.views.create_stripe_payment_for_rental")
     def test_calls_service_and_returns_payment_data(self, mock_service):
+        """Tests that the endpoint calls the service and returns correct payment data."""
         mock_payment = MagicMock()
         mock_payment.id = 42
         mock_payment.money_to_pay = Decimal("300.00")
@@ -65,18 +66,21 @@ class TestCreateRentalPaymentAPIView(BasePaymentViewTest):
 
 class TestPaymentSuccessAPIView(BasePaymentViewTest):
     def test_missing_session_id_returns_400(self):
+        """Tests that requests without session_id return 400 Bad Request."""
         url = reverse("payment:success")
         response = self.client.get(url)
 
         assert response.status_code == 400
 
     def test_payment_not_found_returns_404(self):
+        """Tests that invalid session_id returns 404 Not Found."""
         url = reverse("payment:success")
         response = self.client.get(url, {"session_id": "invalid"})
 
         assert response.status_code == 404
 
     def test_existing_payment_returns_success(self):
+        """Tests that a valid session_id returns payment details."""
         payment = Payment.objects.create(
             rental=self.rental,
             type=Payment.Type.RENTAL,
@@ -94,6 +98,7 @@ class TestPaymentSuccessAPIView(BasePaymentViewTest):
 
 class TestPaymentCancelAPIView(BasePaymentViewTest):
     def test_cancel_payment_endpoint_works(self):
+        """Tests that the cancel endpoint returns a user-friendly message."""
         url = reverse("payment:cancel")
         response = self.client.get(url)
 
@@ -110,6 +115,7 @@ class TestStripeWebhookAPIView(BasePaymentViewTest):
         mock_notify,
         mock_complete_rental,
     ):
+        """Tests processing of a valid Stripe webhook event."""
         payment = Payment.objects.create(
             rental=self.rental,
             type=Payment.Type.RENTAL,
@@ -142,6 +148,7 @@ class TestStripeWebhookAPIView(BasePaymentViewTest):
         side_effect=ValueError("Invalid payload"),
     )
     def test_invalid_webhook_signature_returns_400(self, _):
+        """Tests that invalid Stripe signature returns 400 Bad Request."""
         url = reverse("payment:stripe-webhook")
         response = self.client.post(
             url,
