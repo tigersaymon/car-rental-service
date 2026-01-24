@@ -1,12 +1,26 @@
-import requests
+import logging
+
+import telebot
 from django.conf import settings
 
 
+logger = logging.getLogger(__name__)
+
+bot = telebot.TeleBot(
+    settings.TELEGRAM_BOT_TOKEN,
+    parse_mode="HTML",
+)
+
+
 def send_telegram_message(text: str):
-    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": settings.TELEGRAM_ADMIN_CHAT_ID, "text": text, "parse_mode": "HTML"}
+    """
+    Send a message to the configured Telegram admin chat.
+    Logs an error if sending fails.
+    """
     try:
-        tg_response = requests.post(url, data=payload, timeout=5)
-        print(tg_response.status_code, tg_response.json())
+        bot.send_message(
+            chat_id=settings.TELEGRAM_ADMIN_CHAT_ID,
+            text=text,
+        )
     except Exception as e:
-        print("Telegram error:", e)
+        logger.error("Failed to send Telegram message: %s", e)
