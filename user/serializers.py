@@ -7,6 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
     Serializer for the User model, handling registration and updates
     with secure password hashing.
     """
+
     class Meta:
         model = get_user_model()
         fields = ("id", "email", "password", "first_name", "last_name", "is_staff")
