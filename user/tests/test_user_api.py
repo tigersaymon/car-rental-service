@@ -15,13 +15,13 @@ class UserApiTests(TestCase):
         self.client = APIClient()
 
     def test_create_user_success(self):
-        """Checking successful user registration"""
+        """Tests successful user registration via API."""
         payload = {"email": "test@test.com", "password": "password123"}
         res = self.client.post(CREATE_USER_URL, payload)
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
     def test_token_obtain(self):
-        """Verification of receipt JWT tokens"""
+        """Tests retrieval of JWT tokens with valid credentials."""
         get_user_model().objects.create_user(email="test@test.com", password="password123")
         payload = {"email": "test@test.com", "password": "password123"}
         res = self.client.post(TOKEN_URL, payload)
@@ -29,6 +29,6 @@ class UserApiTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
     def test_auth_required_for_me(self):
-        """Checking that access to /me/ is closed without tokens (Permissions)"""
+        """Tests that the /me/ endpoint requires authentication."""
         res = self.client.get(ME_URL)
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
