@@ -60,8 +60,7 @@ class StripeWebhookAPIView(APIView):
                 secret=WEBHOOK_SECRET,
             )
         except (ValueError, stripe.error.SignatureVerificationError):
-            return Response({"detail": "Invalid webhook signature or payload"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Invalid webhook signature or payload"}, status=status.HTTP_400_BAD_REQUEST)
 
         if event["type"] == "checkout.session.completed":
             session = event["data"]["object"]
@@ -98,13 +97,11 @@ class PaymentSuccessAPIView(APIView):
         """
         session_id = request.GET.get("session_id")
         if not session_id:
-            return Response({"detail": "Missing session_id"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Missing session_id"}, status=status.HTTP_400_BAD_REQUEST)
 
         payment = Payment.objects.filter(session_id=session_id).first()
         if not payment:
-            return Response({"detail": "Payment not found"},
-                            status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Payment not found"}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(
             {
@@ -133,12 +130,7 @@ class PaymentCancelAPIView(APIView):
     def get(self, request):
         """Returns a generic cancellation message."""
         return Response(
-            {
-                "detail": (
-                    "Payment was cancelled. "
-                    "You can complete it later — session is valid for 24 hours."
-                )
-            },
+            {"detail": ("Payment was cancelled. You can complete it later — session is valid for 24 hours.")},
             status=status.HTTP_200_OK,
         )
 
@@ -175,8 +167,7 @@ class CreateRentalPaymentAPIView(APIView):
                 request=request,
             )
         except PaymentServiceError as e:
-            return Response({"detail": str(e)},
-                            status=status.HTTP_502_BAD_GATEWAY)
+            return Response({"detail": str(e)}, status=status.HTTP_502_BAD_GATEWAY)
 
         return Response(
             {

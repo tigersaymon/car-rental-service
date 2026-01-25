@@ -17,10 +17,7 @@ class PaymentServicesTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(email="user@test.com", password="1234")
-        self.car = Car.objects.create(
-            brand="BMW", model="X5", year=2023,
-            fuel_type="GAS", daily_rate=100, inventory=1
-        )
+        self.car = Car.objects.create(brand="BMW", model="X5", year=2023, fuel_type="GAS", daily_rate=100, inventory=1)
         self.rental = Rental.objects.create(
             user=self.user,
             car=self.car,
