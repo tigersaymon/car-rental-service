@@ -31,10 +31,7 @@ def create_stripe_payment_for_rental(
 
     amount = _calculate_amount(rental=rental, payment_type=payment_type)
 
-    success_url = (
-        request.build_absolute_uri(reverse("payment:success"))
-        + "?session_id={CHECKOUT_SESSION_ID}"
-    )
+    success_url = request.build_absolute_uri(reverse("payment:success")) + "?session_id={CHECKOUT_SESSION_ID}"
     cancel_url = request.build_absolute_uri(reverse("payment:cancel"))
 
     try:
@@ -45,9 +42,7 @@ def create_stripe_payment_for_rental(
                 {
                     "price_data": {
                         "currency": "usd",
-                        "product_data": {
-                            "name": f"Rental #{rental.id} — {payment_type}"
-                        },
+                        "product_data": {"name": f"Rental #{rental.id} — {payment_type}"},
                         "unit_amount": int(amount * 100),
                     },
                     "quantity": 1,
@@ -97,9 +92,7 @@ def _calculate_amount(*, rental: Rental, payment_type: Payment.Type) -> Decimal:
         if not rental.actual_return_date:
             raise ValueError("Cannot calculate overdue fee without actual_return_date")
         overdue_days = max((rental.actual_return_date - rental.end_date).days, 0)
-        return (
-            Decimal(overdue_days) * daily_rate * FINE_MULTIPLIER
-        ).quantize(Decimal("0.01"))
+        return (Decimal(overdue_days) * daily_rate * FINE_MULTIPLIER).quantize(Decimal("0.01"))
 
     raise ValueError("Unsupported payment type")
 
@@ -119,9 +112,7 @@ def complete_rental_if_all_payments_paid(payment: Payment) -> None:
         return
 
     has_pending_payments = (
-        Payment.objects.filter(rental=rental, status=Payment.Status.PENDING)
-        .exclude(id=payment.id)
-        .exists()
+        Payment.objects.filter(rental=rental, status=Payment.Status.PENDING).exclude(id=payment.id).exists()
     )
 
     if not has_pending_payments:
