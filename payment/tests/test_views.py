@@ -8,6 +8,7 @@ from rest_framework.test import APIClient
 
 from car.models import Car
 from payment.models import Payment
+from payment.services import PaymentServiceError
 from rental.models import Rental
 from user.models import User
 
@@ -48,20 +49,29 @@ class TestCreateRentalPaymentAPIView(BasePaymentViewTest):
 
         mock_service.return_value = mock_payment
 
-        url = reverse(
-            "payment:create-rental-payment",
-            kwargs={"rental_id": self.rental.id},
-        )
+        url = reverse("payment:create-rental-payment", kwargs={"rental_id": self.rental.id})
         response = self.client.post(url)
 
         mock_service.assert_called_once_with(
             rental=self.rental,
             payment_type=Payment.Type.RENTAL,
-            request=ANY,  # приймаємо будь-який request
+            request=ANY,
         )
 
+        assert response.status_code == 200
         assert response.data["session_url"] == mock_payment.session_url
         assert response.data["money_to_pay"] == "300.00"
+
+    @patch("payment.views.create_stripe_payment_for_rental")
+    def test_service_error_returns_502(self, mock_service):
+        """Tests that PaymentServiceError from service is converted into 502 Bad Gateway."""
+        mock_service.side_effect = PaymentServiceError("Stripe API connection failed")
+
+        url = reverse("payment:create-rental-payment", kwargs={"rental_id": self.rental.id})
+        response = self.client.post(url)
+
+        assert response.status_code == 502
+        assert "Stripe API connection failed" in response.data["detail"]
 
 
 class TestPaymentSuccessAPIView(BasePaymentViewTest):
@@ -130,12 +140,7 @@ class TestStripeWebhookAPIView(BasePaymentViewTest):
         }
 
         url = reverse("payment:stripe-webhook")
-        self.client.post(
-            url,
-            data={},
-            HTTP_STRIPE_SIGNATURE="test",
-            format="json",
-        )
+        self.client.post(url, data={}, HTTP_STRIPE_SIGNATURE="test", format="json")
 
         payment.refresh_from_db()
 
@@ -143,18 +148,9 @@ class TestStripeWebhookAPIView(BasePaymentViewTest):
         mock_notify.assert_called_once_with(payment.id)
         mock_complete_rental.assert_called_once_with(payment)
 
-    @patch(
-        "payment.views.stripe.Webhook.construct_event",
-        side_effect=ValueError("Invalid payload"),
-    )
+    @patch("payment.views.stripe.Webhook.construct_event", side_effect=ValueError("Invalid payload"))
     def test_invalid_webhook_signature_returns_400(self, _):
         """Tests that invalid Stripe signature returns 400 Bad Request."""
         url = reverse("payment:stripe-webhook")
-        response = self.client.post(
-            url,
-            data={},
-            HTTP_STRIPE_SIGNATURE="invalid",
-            format="json",
-        )
-
+        response = self.client.post(url, data={}, HTTP_STRIPE_SIGNATURE="invalid", format="json")
         assert response.status_code == 400

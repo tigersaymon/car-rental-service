@@ -1,6 +1,5 @@
-import os
-
 import stripe
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -14,14 +13,15 @@ from notifications.tasks import notify_successful_payment
 from payment.models import Payment
 from payment.serializers import PaymentDetailSerializer, PaymentListSerializer
 from payment.services import (
+    PaymentServiceError,
     complete_rental_if_all_payments_paid,
     create_stripe_payment_for_rental,
 )
 from rental.models import Rental
 
 
-WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+stripe.api_key = settings.STRIPE_SECRET_KEY
+WEBHOOK_SECRET = settings.STRIPE_WEBHOOK_SECRET
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -59,21 +59,21 @@ class StripeWebhookAPIView(APIView):
                 sig_header=sig_header,
                 secret=WEBHOOK_SECRET,
             )
-        except ValueError:
-            return Response(status=400)
-        except stripe.error.SignatureVerificationError:
-            return Response(status=400)
+        except (ValueError, stripe.error.SignatureVerificationError):
+            return Response({"detail": "Invalid webhook signature or payload"}, status=status.HTTP_400_BAD_REQUEST)
 
         if event["type"] == "checkout.session.completed":
             session = event["data"]["object"]
             payment = Payment.objects.filter(session_id=session["id"]).first()
-            if payment:
+
+            if payment and payment.status != Payment.Status.PAID:
                 payment.status = Payment.Status.PAID
                 payment.save(update_fields=["status"])
+
                 notify_successful_payment.delay(payment.id)
                 complete_rental_if_all_payments_paid(payment)
 
-        return Response(status=200)
+        return Response(status=status.HTTP_200_OK)
 
 
 class PaymentSuccessAPIView(APIView):
@@ -97,20 +97,18 @@ class PaymentSuccessAPIView(APIView):
         """
         session_id = request.GET.get("session_id")
         if not session_id:
-            return Response(
-                {"detail": "Missing session_id"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"detail": "Missing session_id"}, status=status.HTTP_400_BAD_REQUEST)
 
         payment = Payment.objects.filter(session_id=session_id).first()
         if not payment:
-            return Response(
-                {"detail": "Payment not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response({"detail": "Payment not found"}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(
-            {"detail": "Payment successful", "payment_id": payment.id},
+            {
+                "detail": "Payment successful",
+                "payment_id": payment.id,
+                "status": payment.status,
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -132,7 +130,7 @@ class PaymentCancelAPIView(APIView):
     def get(self, request):
         """Returns a generic cancellation message."""
         return Response(
-            {"detail": ("Payment was cancelled. You can complete it later — session valid for 24 hours.")},
+            {"detail": ("Payment was cancelled. You can complete it later — session is valid for 24 hours.")},
             status=status.HTTP_200_OK,
         )
 
@@ -153,19 +151,23 @@ class CreateRentalPaymentAPIView(APIView):
             "Creates a Stripe Checkout session for the given rental "
             "and returns payment information including session URL."
         ),
-        responses={200: None, 401: None, 404: None},
+        responses={200: None, 401: None, 404: None, 502: None},
     )
     def post(self, request, rental_id):
         """
         Generates a new payment session for the specified rental ID.
+        Handles Stripe errors gracefully and returns appropriate HTTP status codes.
         """
         rental = get_object_or_404(Rental, id=rental_id)
 
-        payment = create_stripe_payment_for_rental(
-            rental=rental,
-            payment_type=Payment.Type.RENTAL,
-            request=request,
-        )
+        try:
+            payment = create_stripe_payment_for_rental(
+                rental=rental,
+                payment_type=Payment.Type.RENTAL,
+                request=request,
+            )
+        except PaymentServiceError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_502_BAD_GATEWAY)
 
         return Response(
             {
@@ -196,7 +198,11 @@ class CreateRentalPaymentAPIView(APIView):
         ),
     ),
 )
-class PaymentViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class PaymentViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
     """
     ViewSet for viewing payments.
     Supports listing and retrieving individual payment details.
