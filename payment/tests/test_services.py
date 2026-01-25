@@ -2,6 +2,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
+import stripe
 from django.test import TestCase
 
 from car.models import Car
@@ -9,7 +10,6 @@ from payment import services
 from payment.models import Payment
 from rental.models import Rental
 from user.models import User
-import stripe
 
 
 class PaymentServicesTests(TestCase):

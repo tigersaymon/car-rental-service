@@ -8,9 +8,9 @@ from rest_framework.test import APIClient
 
 from car.models import Car
 from payment.models import Payment
+from payment.services import PaymentServiceError
 from rental.models import Rental
 from user.models import User
-from payment.services import PaymentServiceError
 
 
 class BasePaymentViewTest(TestCase):

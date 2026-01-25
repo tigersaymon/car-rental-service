@@ -13,9 +13,9 @@ from notifications.tasks import notify_successful_payment
 from payment.models import Payment
 from payment.serializers import PaymentDetailSerializer, PaymentListSerializer
 from payment.services import (
+    PaymentServiceError,
     complete_rental_if_all_payments_paid,
     create_stripe_payment_for_rental,
-    PaymentServiceError,
 )
 from rental.models import Rental
 
