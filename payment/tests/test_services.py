@@ -9,6 +9,7 @@ from payment import services
 from payment.models import Payment
 from rental.models import Rental
 from user.models import User
+import stripe
 
 
 class PaymentServicesTests(TestCase):
@@ -16,9 +17,15 @@ class PaymentServicesTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(email="user@test.com", password="1234")
-        self.car = Car.objects.create(brand="BMW", model="X5", year=2023, fuel_type="GAS", daily_rate=100, inventory=1)
+        self.car = Car.objects.create(
+            brand="BMW", model="X5", year=2023,
+            fuel_type="GAS", daily_rate=100, inventory=1
+        )
         self.rental = Rental.objects.create(
-            user=self.user, car=self.car, start_date=date.today(), end_date=date.today() + timedelta(days=2)
+            user=self.user,
+            car=self.car,
+            start_date=date.today(),
+            end_date=date.today() + timedelta(days=2),
         )
 
     def test_calculate_amount_various(self):
@@ -63,6 +70,22 @@ class PaymentServicesTests(TestCase):
         self.assertEqual(payment.session_url, "http://stripe.test")
         self.assertEqual(payment.money_to_pay, Decimal("300.00"))
         mock_session.assert_called_once()
+
+    @patch("payment.services.stripe.checkout.Session.create")
+    def test_create_stripe_payment_raises_payment_service_error(self, mock_session):
+        """Tests that Stripe errors are converted into PaymentServiceError."""
+        mock_session.side_effect = stripe.error.APIConnectionError("Connection failed")
+
+        class DummyRequest:
+            def build_absolute_uri(self, path):
+                return f"http://testserver{path}"
+
+        with self.assertRaises(services.PaymentServiceError) as cm:
+            services.create_stripe_payment_for_rental(
+                rental=self.rental, payment_type=Payment.Type.RENTAL, request=DummyRequest()
+            )
+
+        self.assertIn("Stripe API connection failed", str(cm.exception))
 
     def test_complete_rental_status_various(self):
         """
