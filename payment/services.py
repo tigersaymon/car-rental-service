@@ -11,6 +11,11 @@ from rental.models import Rental
 FINE_MULTIPLIER = Decimal("1.5")
 
 
+class PaymentServiceError(Exception):
+    """Custom exception for Stripe payment service errors."""
+    pass
+
+
 def create_stripe_payment_for_rental(
     *,
     rental: Rental,
@@ -20,9 +25,6 @@ def create_stripe_payment_for_rental(
     """
     Creates a Stripe Checkout Session and a corresponding local Payment record.
 
-    This function communicates with Stripe API to generate a payment link
-    and saves the session ID to the database for future verification via webhooks.
-
     Args:
         rental (Rental): The rental instance associated with the payment.
         payment_type (Payment.Type): The type of payment (RENTAL, OVERDUE, etc.).
@@ -30,33 +32,43 @@ def create_stripe_payment_for_rental(
 
     Returns:
         Payment: The created Payment instance containing the session URL.
+
+    Raises:
+        PaymentServiceError: If Stripe API call fails.
     """
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
     amount = _calculate_amount(rental=rental, payment_type=payment_type)
 
-    success_url = request.build_absolute_uri(reverse("payment:success")) + "?session_id={CHECKOUT_SESSION_ID}"
-
+    success_url = (
+        request.build_absolute_uri(reverse("payment:success"))
+        + "?session_id={CHECKOUT_SESSION_ID}"
+    )
     cancel_url = request.build_absolute_uri(reverse("payment:cancel"))
 
-    session = stripe.checkout.Session.create(
-        mode="payment",
-        payment_method_types=["card"],
-        line_items=[
-            {
+    try:
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            payment_method_types=["card"],
+            line_items=[{
                 "price_data": {
                     "currency": "usd",
-                    "product_data": {
-                        "name": f"Rental #{rental.id} — {payment_type}",
-                    },
+                    "product_data": {"name": f"Rental #{rental.id} — {payment_type}"},
                     "unit_amount": int(amount * 100),
                 },
                 "quantity": 1,
-            }
-        ],
-        success_url=success_url,
-        cancel_url=cancel_url,
-    )
+            }],
+            success_url=success_url,
+            cancel_url=cancel_url,
+        )
+    except stripe.error.RateLimitError as exc:
+        raise PaymentServiceError("Stripe API rate limit exceeded") from exc
+    except stripe.error.APIConnectionError as exc:
+        raise PaymentServiceError("Stripe API connection failed") from exc
+    except stripe.error.APIError as exc:
+        raise PaymentServiceError("Stripe API internal error") from exc
+    except stripe.error.StripeError as exc:
+        raise PaymentServiceError(f"Stripe error: {exc}") from exc
 
     payment = Payment.objects.create(
         rental=rental,
@@ -94,7 +106,7 @@ def _calculate_amount(*, rental: Rental, payment_type: Payment.Type) -> Decimal:
     base_price = Decimal(rental_days) * daily_rate
 
     if payment_type == Payment.Type.RENTAL:
-        return base_price
+        return base_price.quantize(Decimal("0.01"))
 
     if payment_type == Payment.Type.CANCELLATION_FEE:
         return (base_price * Decimal("0.5")).quantize(Decimal("0.01"))
@@ -126,11 +138,13 @@ def complete_rental_if_all_payments_paid(payment: Payment) -> None:
         rental.save(update_fields=["status"])
         return
 
-    if rental.status in [Rental.Status.COMPLETED, Rental.Status.CANCELLED]:
+    if rental.status in (Rental.Status.COMPLETED, Rental.Status.CANCELLED):
         return
 
     has_pending_payments = (
-        Payment.objects.filter(rental=rental, status=Payment.Status.PENDING).exclude(id=payment.id).exists()
+        Payment.objects.filter(rental=rental, status=Payment.Status.PENDING)
+        .exclude(id=payment.id)
+        .exists()
     )
 
     if not has_pending_payments:
