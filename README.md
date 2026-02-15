@@ -10,7 +10,7 @@
 
 A comprehensive, containerized backend API for a Car Rental application. This system manages the full lifecycle of vehicle rentals—from smart inventory management and scheduling to secure payments and automated notifications.
 
-Designed with a **microservice-ready architecture**, this project implements industry best practices including **atomic transactions**, **asynchronous task processing**, and **S3-compatible storage**.
+This project implements industry best practices including **atomic transactions**, **asynchronous task processing**, and **S3-compatible storage**.
 
 ---
 
